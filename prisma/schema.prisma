@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum EventFormat {
+  ONLINE
+  OFFLINE
+}
+
+model Category {
+  id     String  @id @default(cuid())
+  name   String
+  slug   String  @unique
+  events Event[]
+
+  @@index([slug])
+}
+
+model Event {
+  id              String          @id @default(cuid())
+  title           String
+  description     String
+  startsAt        DateTime
+  format          EventFormat
+  location        String?
+  capacity        Int?
+  coverImageUrl   String?
+  organizerId     String
+  categoryId      String?
+  category        Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  registrations   Registration[]
+
+  @@index([organizerId])
+  @@index([startsAt])
+  @@index([categoryId])
+}
+
+model Registration {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, email])
+  @@index([eventId])
+}
