@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { adminDeleteCity } from "@/app/actions/admin-references";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { AdminListToolbar } from "@/components/admin-list-toolbar";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { normalizeAdminListQuery } from "@/lib/admin-list-queries";
@@ -53,6 +55,12 @@ export default async function AdminCitiesPage({ searchParams }: Props) {
           ← Admin
         </Link>
         <Link
+          href="/admin/references/categories"
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          Categories
+        </Link>
+        <Link
           href="/admin/references/countries"
           className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
         >
@@ -91,7 +99,7 @@ export default async function AdminCitiesPage({ searchParams }: Props) {
               <th className="p-2.5 font-medium">City</th>
               <th className="p-2.5 font-medium">Slug</th>
               <th className="p-2.5 font-medium">Country</th>
-              <th className="text-muted-foreground min-w-[3rem] whitespace-nowrap p-2.5 text-right text-xs font-medium uppercase tracking-wide">
+              <th className="text-muted-foreground min-w-[5rem] whitespace-nowrap p-2.5 text-right text-xs font-medium uppercase tracking-wide">
                 Actions
               </th>
             </tr>
@@ -119,25 +127,38 @@ export default async function AdminCitiesPage({ searchParams }: Props) {
                   </Link>
                 </td>
                 <td className="p-2.5 text-right whitespace-nowrap">
-                  <form
-                    action={adminDeleteCity.bind(null, city.id)}
-                    className="inline-flex shrink-0 justify-end"
-                  >
-                    <button
-                      type="submit"
+                  <div className="flex flex-row flex-nowrap items-center justify-end gap-0.5">
+                    <Link
+                      href={`/admin/references/cities/${city.id}`}
                       className={cn(
-                        buttonVariants({
-                          variant: "ghost",
-                          size: "icon-sm",
-                        }),
-                        "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
                       )}
-                      title="Delete city"
-                      aria-label={`Delete city “${city.name}”`}
+                      title="Edit"
+                      aria-label={`Edit city “${city.name}”`}
                     >
-                      <Trash2 className="size-4" aria-hidden />
-                    </button>
-                  </form>
+                      <Pencil className="size-4" aria-hidden />
+                    </Link>
+                    <ConfirmForm
+                      action={adminDeleteCity.bind(null, city.id)}
+                      confirmMessage={confirmMessages.deleteCity}
+                      className="inline-flex shrink-0"
+                    >
+                      <button
+                        type="submit"
+                        className={cn(
+                          buttonVariants({
+                            variant: "ghost",
+                            size: "icon-sm",
+                          }),
+                          "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                        )}
+                        title="Delete city"
+                        aria-label={`Delete city “${city.name}”`}
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </button>
+                    </ConfirmForm>
+                  </div>
                 </td>
               </tr>
             ))}

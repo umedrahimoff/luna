@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { adminCreateCategory } from "@/app/actions/admin-data";
+import { adminCreateCategory } from "@/app/actions/admin-references";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,8 +47,9 @@ export default async function AdminNewCategoryPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <form
+      <ConfirmForm
         action={adminCreateCategory}
+        confirmMessage={confirmMessages.createCategory}
         className={adminDetailFormCardClass}
       >
         <div className="space-y-2">
@@ -62,7 +65,7 @@ export default async function AdminNewCategoryPage({ searchParams }: Props) {
         <Button type="submit" className="w-full sm:w-auto">
           Add
         </Button>
-      </form>
+      </ConfirmForm>
     </div>
   );
 }

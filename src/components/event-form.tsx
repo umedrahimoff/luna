@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { ActionState } from "@/app/actions/events";
 import { createEvent, updateEvent } from "@/app/actions/events";
 import { toDatetimeLocalValue } from "@/lib/format";
+import { confirmMessages } from "@/lib/confirm-messages";
 import Link from "next/link";
 
 export type EventCategoryOption = { id: number; name: string };
@@ -50,7 +51,9 @@ export function EventForm(props: Props) {
       : "";
   const defaultEndsAt =
     props.mode === "edit"
-      ? toDatetimeLocalValue(props.event.endsAt)
+      ? toDatetimeLocalValue(
+          props.event.endsAt ?? props.event.startsAt,
+        )
       : "";
 
   const afterRedirect =
@@ -71,16 +74,27 @@ export function EventForm(props: Props) {
     );
   }
 
+  const fieldShell = "space-y-2 min-w-0";
+  const span2 = "sm:col-span-2";
+
   return (
     <form
       action={formAction}
-      className="flex w-full min-w-0 flex-col gap-4"
+      onSubmit={(e) => {
+        const ok = window.confirm(
+          props.mode === "create"
+            ? confirmMessages.eventCreate
+            : confirmMessages.eventSave,
+        );
+        if (!ok) e.preventDefault();
+      }}
+      className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2"
     >
       {afterRedirect ? (
         <input type="hidden" name="_redirect" value={afterRedirect} />
       ) : null}
 
-      <div className="space-y-2">
+      <div className={cn(fieldShell)}>
         <Label htmlFor="categoryId">Category</Label>
         <select
           id="categoryId"
@@ -109,133 +123,7 @@ export function EventForm(props: Props) {
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="title">Title</Label>
-        <Input
-          id="title"
-          name="title"
-          required
-          maxLength={200}
-          defaultValue={props.mode === "edit" ? props.event.title : ""}
-          aria-invalid={!!fieldError(state.fieldErrors, "title")}
-        />
-        {fieldError(state.fieldErrors, "title") && (
-          <p className="text-destructive text-sm">
-            {fieldError(state.fieldErrors, "title")}
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          name="description"
-          required
-          rows={5}
-          maxLength={8000}
-          defaultValue={
-            props.mode === "edit" ? props.event.description : ""
-          }
-          aria-invalid={!!fieldError(state.fieldErrors, "description")}
-        />
-        {fieldError(state.fieldErrors, "description") && (
-          <p className="text-destructive text-sm">
-            {fieldError(state.fieldErrors, "description")}
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="coverImageUrl">Cover image (URL)</Label>
-        <Input
-          id="coverImageUrl"
-          name="coverImageUrl"
-          type="url"
-          inputMode="url"
-          placeholder="https://example.com/poster.jpg"
-          defaultValue={
-            props.mode === "edit" ? props.event.coverImageUrl ?? "" : ""
-          }
-          aria-invalid={!!fieldError(state.fieldErrors, "coverImageUrl")}
-        />
-        <p className="text-muted-foreground text-xs leading-relaxed">
-          A square <strong className="font-medium text-foreground">1:1</strong>{" "}
-          image works best. Leave empty for a placeholder.
-        </p>
-        {fieldError(state.fieldErrors, "coverImageUrl") && (
-          <p className="text-destructive text-sm">
-            {fieldError(state.fieldErrors, "coverImageUrl")}
-          </p>
-        )}
-      </div>
-
-      <div className="border-border bg-muted/30 relative rounded-xl border p-4 pl-9 ring-1 ring-black/5">
-        <div
-          className="border-border absolute top-8 bottom-10 left-[1.125rem] -translate-x-1/2 border-l border-dashed"
-          aria-hidden
-        />
-        <div className="relative space-y-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <div className="text-muted-foreground flex min-w-[4.5rem] items-center gap-2 text-sm font-medium">
-              <span
-                className="bg-muted-foreground size-2 shrink-0 rounded-full"
-                aria-hidden
-              />
-              Start
-            </div>
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Label htmlFor="startsAt" className="sr-only">
-                Start date and time
-              </Label>
-              <Input
-                id="startsAt"
-                name="startsAt"
-                type="datetime-local"
-                required
-                defaultValue={defaultStartsAt}
-                className="max-w-md"
-                aria-invalid={!!fieldError(state.fieldErrors, "startsAt")}
-              />
-              {fieldError(state.fieldErrors, "startsAt") ? (
-                <p className="text-destructive text-sm">
-                  {fieldError(state.fieldErrors, "startsAt")}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <div className="text-muted-foreground flex min-w-[4.5rem] items-center gap-2 text-sm font-medium">
-              <span
-                className="border-muted-foreground size-2 shrink-0 rounded-full border-2 border-dashed bg-transparent"
-                aria-hidden
-              />
-              End
-            </div>
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Label htmlFor="endsAt" className="sr-only">
-                End date and time
-              </Label>
-              <Input
-                id="endsAt"
-                name="endsAt"
-                type="datetime-local"
-                required
-                defaultValue={defaultEndsAt}
-                className="max-w-md"
-                aria-invalid={!!fieldError(state.fieldErrors, "endsAt")}
-              />
-              {fieldError(state.fieldErrors, "endsAt") ? (
-                <p className="text-destructive text-sm">
-                  {fieldError(state.fieldErrors, "endsAt")}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
+      <div className={cn(fieldShell)}>
         <Label htmlFor="format">Format</Label>
         <select
           id="format"
@@ -261,7 +149,102 @@ export function EventForm(props: Props) {
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className={cn(fieldShell, span2)}>
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
+          name="title"
+          required
+          maxLength={200}
+          defaultValue={props.mode === "edit" ? props.event.title : ""}
+          aria-invalid={!!fieldError(state.fieldErrors, "title")}
+        />
+        {fieldError(state.fieldErrors, "title") && (
+          <p className="text-destructive text-sm">
+            {fieldError(state.fieldErrors, "title")}
+          </p>
+        )}
+      </div>
+
+      <div className={cn(fieldShell, span2)}>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          name="description"
+          required
+          rows={5}
+          maxLength={8000}
+          defaultValue={
+            props.mode === "edit" ? props.event.description : ""
+          }
+          aria-invalid={!!fieldError(state.fieldErrors, "description")}
+        />
+        {fieldError(state.fieldErrors, "description") && (
+          <p className="text-destructive text-sm">
+            {fieldError(state.fieldErrors, "description")}
+          </p>
+        )}
+      </div>
+
+      <div className={cn(fieldShell, span2)}>
+        <Label htmlFor="coverImageUrl">Cover image (URL)</Label>
+        <Input
+          id="coverImageUrl"
+          name="coverImageUrl"
+          type="url"
+          inputMode="url"
+          placeholder="https://example.com/poster.jpg"
+          defaultValue={
+            props.mode === "edit" ? props.event.coverImageUrl ?? "" : ""
+          }
+          aria-invalid={!!fieldError(state.fieldErrors, "coverImageUrl")}
+        />
+        <p className="text-muted-foreground text-xs leading-relaxed">
+          A square <strong className="font-medium text-foreground">1:1</strong>{" "}
+          image works best. Leave empty for a placeholder.
+        </p>
+        {fieldError(state.fieldErrors, "coverImageUrl") && (
+          <p className="text-destructive text-sm">
+            {fieldError(state.fieldErrors, "coverImageUrl")}
+          </p>
+        )}
+      </div>
+
+      <div className={cn(fieldShell)}>
+        <Label htmlFor="startsAt">Start</Label>
+        <Input
+          id="startsAt"
+          name="startsAt"
+          type="datetime-local"
+          required
+          defaultValue={defaultStartsAt}
+          aria-invalid={!!fieldError(state.fieldErrors, "startsAt")}
+        />
+        {fieldError(state.fieldErrors, "startsAt") && (
+          <p className="text-destructive text-sm">
+            {fieldError(state.fieldErrors, "startsAt")}
+          </p>
+        )}
+      </div>
+
+      <div className={cn(fieldShell)}>
+        <Label htmlFor="endsAt">End</Label>
+        <Input
+          id="endsAt"
+          name="endsAt"
+          type="datetime-local"
+          required
+          defaultValue={defaultEndsAt}
+          aria-invalid={!!fieldError(state.fieldErrors, "endsAt")}
+        />
+        {fieldError(state.fieldErrors, "endsAt") && (
+          <p className="text-destructive text-sm">
+            {fieldError(state.fieldErrors, "endsAt")}
+          </p>
+        )}
+      </div>
+
+      <div className={cn(fieldShell)}>
         <Label htmlFor="location">Location (offline)</Label>
         <Input
           id="location"
@@ -280,7 +263,7 @@ export function EventForm(props: Props) {
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className={cn(fieldShell)}>
         <Label htmlFor="capacity">Capacity limit (optional)</Label>
         <Input
           id="capacity"
@@ -305,20 +288,32 @@ export function EventForm(props: Props) {
       </div>
 
       {state.message && (
-        <p className="text-destructive text-sm">{state.message}</p>
+        <p className={cn("text-destructive text-sm", span2)}>{state.message}</p>
       )}
 
-      <Button
-        type="submit"
-        disabled={pending}
-        className="mt-1 w-full sm:w-auto sm:min-w-44"
+      <div
+        className={cn(
+          span2,
+          "flex",
+          props.mode === "edit" ? "justify-end" : "justify-start",
+        )}
       >
-        {pending
-          ? "Saving…"
-          : props.mode === "create"
-            ? "Create event"
-            : "Save changes"}
-      </Button>
+        <Button
+          type="submit"
+          disabled={pending}
+          className={
+            props.mode === "edit"
+              ? "min-w-32 shrink-0"
+              : "mt-1 w-full min-w-44 sm:w-auto"
+          }
+        >
+          {pending
+            ? "Saving…"
+            : props.mode === "create"
+              ? "Create event"
+              : "Save changes"}
+        </Button>
+      </div>
     </form>
   );
 }

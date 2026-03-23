@@ -1,0 +1,29 @@
+import { z } from "zod";
+
+export const updateProfileSchema = z.object({
+  firstName: z.string().trim().min(1, "Enter your first name").max(60),
+  lastName: z.string().trim().max(60),
+  email: z.string().trim().email("Invalid email").max(320),
+  bio: z
+    .string()
+    .max(2000, "Bio is too long")
+    .transform((s) => (s.trim() === "" ? undefined : s.trim())),
+});
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password"),
+    newPassword: z
+      .string()
+      .min(8, "New password must be at least 8 characters")
+      .max(200),
+    confirmPassword: z.string().min(1, "Confirm your new password"),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Enter your password to confirm"),
+});

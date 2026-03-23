@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { db } from "@/lib/db";
-import { adminDeleteCategory } from "@/app/actions/admin-data";
+import { adminDeleteCategory } from "@/app/actions/admin-references";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { AdminListToolbar } from "@/components/admin-list-toolbar";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { normalizeAdminListQuery } from "@/lib/admin-list-queries";
@@ -38,6 +40,18 @@ export default async function AdminCategoriesPage({ searchParams }: Props) {
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
         >
           ← Admin
+        </Link>
+        <Link
+          href="/admin/references/countries"
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          Countries
+        </Link>
+        <Link
+          href="/admin/references/cities"
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          Cities
         </Link>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -78,7 +92,7 @@ export default async function AdminCategoriesPage({ searchParams }: Props) {
               <th className="p-2.5 font-medium">Name</th>
               <th className="p-2.5 font-medium">Slug</th>
               <th className="p-2.5 font-medium">Events</th>
-              <th className="text-muted-foreground min-w-[3rem] whitespace-nowrap p-2.5 text-right text-xs font-medium uppercase tracking-wide">
+              <th className="text-muted-foreground min-w-[5rem] whitespace-nowrap p-2.5 text-right text-xs font-medium uppercase tracking-wide">
                 Actions
               </th>
             </tr>
@@ -99,25 +113,38 @@ export default async function AdminCategoriesPage({ searchParams }: Props) {
                 </td>
                 <td className="p-2.5 tabular-nums">{c._count.events}</td>
                 <td className="p-2.5 text-right whitespace-nowrap">
-                  <form
-                    action={adminDeleteCategory.bind(null, c.id)}
-                    className="inline-flex shrink-0 justify-end"
-                  >
-                    <button
-                      type="submit"
+                  <div className="flex flex-row flex-nowrap items-center justify-end gap-0.5">
+                    <Link
+                      href={`/admin/references/categories/${c.id}`}
                       className={cn(
-                        buttonVariants({
-                          variant: "ghost",
-                          size: "icon-sm",
-                        }),
-                        "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
                       )}
-                      title="Delete category"
-                      aria-label={`Delete category “${c.name}”`}
+                      title="Edit"
+                      aria-label={`Edit category “${c.name}”`}
                     >
-                      <Trash2 className="size-4" aria-hidden />
-                    </button>
-                  </form>
+                      <Pencil className="size-4" aria-hidden />
+                    </Link>
+                    <ConfirmForm
+                      action={adminDeleteCategory.bind(null, c.id)}
+                      confirmMessage={confirmMessages.deleteCategory}
+                      className="inline-flex shrink-0"
+                    >
+                      <button
+                        type="submit"
+                        className={cn(
+                          buttonVariants({
+                            variant: "ghost",
+                            size: "icon-sm",
+                          }),
+                          "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                        )}
+                        title="Delete category"
+                        aria-label={`Delete category “${c.name}”`}
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </button>
+                    </ConfirmForm>
+                  </div>
                 </td>
               </tr>
             ))}

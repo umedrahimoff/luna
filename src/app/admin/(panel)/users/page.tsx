@@ -4,6 +4,8 @@ import { UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { userRoleLabel } from "@/lib/role-labels";
 import { adminDeleteUser } from "@/app/actions/admin-users";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { AdminListToolbar } from "@/components/admin-list-toolbar";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Label } from "@/components/ui/label";
@@ -137,8 +139,9 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                     >
                       <Pencil className="size-4" aria-hidden />
                     </Link>
-                    <form
+                    <ConfirmForm
                       action={adminDeleteUser.bind(null, u.id)}
+                      confirmMessage={confirmMessages.deleteUser}
                       className="inline-flex shrink-0"
                     >
                       <button
@@ -162,7 +165,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                       >
                         <Trash2 className="size-4" aria-hidden />
                       </button>
-                    </form>
+                    </ConfirmForm>
                   </div>
                 </td>
               </tr>

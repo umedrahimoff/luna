@@ -43,7 +43,12 @@ export default async function RootLayout({
           showAdminLink={staff}
           sessionUser={
             sessionUser
-              ? { name: sessionUser.name, email: sessionUser.email }
+              ? {
+                  name: sessionUser.name,
+                  email: sessionUser.email,
+                  username: sessionUser.username,
+                  avatarUrl: sessionUser.avatarUrl,
+                }
               : null
           }
         />

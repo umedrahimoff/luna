@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Calendar, Compass, Search } from "lucide-react";
+import { Bell, Calendar, Compass, Plus, Search } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { HeaderLocalTime } from "@/components/header-local-time";
 import { UserHeaderMenu } from "@/components/user-header-menu";
@@ -10,7 +10,12 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   showAdminLink?: boolean;
-  sessionUser?: { name: string; email: string } | null;
+  sessionUser?: {
+    name: string;
+    email: string;
+    username: string | null;
+    avatarUrl: string | null;
+  } | null;
 };
 
 function MainNavLink({
@@ -27,8 +32,9 @@ function MainNavLink({
   return (
     <Link
       href={href}
+      title={label}
       className={cn(
-        "hover:bg-accent/70 flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+        "hover:bg-accent/70 flex shrink-0 items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium transition-colors sm:gap-2 sm:px-2.5",
         active
           ? "text-foreground"
           : "text-muted-foreground hover:text-foreground",
@@ -36,18 +42,18 @@ function MainNavLink({
       aria-current={active ? "page" : undefined}
     >
       <Icon className="size-4 shrink-0 opacity-90" aria-hidden />
-      {label}
+      <span className="hidden sm:inline">{label}</span>
     </Link>
   );
 }
 
 function HeaderIconSlots() {
   return (
-    <div className="text-muted-foreground flex items-center">
-      <span className="inline-flex p-2 opacity-60" aria-hidden>
+    <div className="text-muted-foreground hidden items-center sm:flex">
+      <span className="inline-flex p-1.5 opacity-60 sm:p-2" aria-hidden>
         <Search className="size-4" />
       </span>
-      <span className="relative inline-flex p-2 opacity-60" aria-hidden>
+      <span className="relative inline-flex p-1.5 opacity-60 sm:p-2" aria-hidden>
         <Bell className="size-4" />
         <span className="bg-destructive absolute top-1.5 right-1.5 size-2 rounded-full" />
       </span>
@@ -57,6 +63,9 @@ function HeaderIconSlots() {
 
 export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
   const pathname = usePathname();
+  if (pathname === "/login" || pathname === "/register") {
+    return null;
+  }
   const isAdminPanel =
     pathname.startsWith("/admin") && !pathname.startsWith("/admin/login");
 
@@ -81,13 +90,19 @@ export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
   );
 
   const headerTools = (
-    <div className="flex shrink-0 items-center gap-0.5 sm:gap-2">
+    <div className="flex min-w-0 shrink-0 items-center gap-0.5 sm:gap-2">
       <HeaderLocalTime />
       <Link
         href="/events/new"
-        className="text-foreground hover:text-foreground/80 px-2 py-2 text-sm font-medium whitespace-nowrap"
+        className={cn(
+          buttonVariants({ variant: "ghost", size: "sm" }),
+          "text-foreground shrink-0 gap-1.5 px-2 font-medium",
+        )}
+        aria-label="Create event"
+        title="Create event"
       >
-        Create event
+        <Plus className="size-4 sm:hidden" aria-hidden />
+        <span className="hidden sm:inline">Create event</span>
       </Link>
       <HeaderIconSlots />
       {sessionUser ? (
@@ -109,7 +124,7 @@ export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
             href="/login"
             className={cn(
               buttonVariants({ variant: "ghost", size: "sm" }),
-              "whitespace-nowrap",
+              "shrink-0 whitespace-nowrap",
             )}
           >
             Sign in

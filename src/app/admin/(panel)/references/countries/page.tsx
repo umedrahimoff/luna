@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { adminDeleteCountry } from "@/app/actions/admin-references";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { AdminListToolbar } from "@/components/admin-list-toolbar";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { normalizeAdminListQuery } from "@/lib/admin-list-queries";
@@ -50,6 +52,12 @@ export default async function AdminCountriesPage({ searchParams }: Props) {
           ← Admin
         </Link>
         <Link
+          href="/admin/references/categories"
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          Categories
+        </Link>
+        <Link
           href="/admin/references/cities"
           className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
         >
@@ -89,7 +97,7 @@ export default async function AdminCountriesPage({ searchParams }: Props) {
               <th className="p-2.5 font-medium">Slug</th>
               <th className="p-2.5 font-medium">ISO</th>
               <th className="p-2.5 font-medium">Cities</th>
-              <th className="text-muted-foreground min-w-[3rem] whitespace-nowrap p-2.5 text-right text-xs font-medium uppercase tracking-wide">
+              <th className="text-muted-foreground min-w-[5rem] whitespace-nowrap p-2.5 text-right text-xs font-medium uppercase tracking-wide">
                 Actions
               </th>
             </tr>
@@ -113,25 +121,38 @@ export default async function AdminCountriesPage({ searchParams }: Props) {
                 </td>
                 <td className="p-2.5 tabular-nums">{c._count.cities}</td>
                 <td className="p-2.5 text-right whitespace-nowrap">
-                  <form
-                    action={adminDeleteCountry.bind(null, c.id)}
-                    className="inline-flex shrink-0 justify-end"
-                  >
-                    <button
-                      type="submit"
+                  <div className="flex flex-row flex-nowrap items-center justify-end gap-0.5">
+                    <Link
+                      href={`/admin/references/countries/${c.id}`}
                       className={cn(
-                        buttonVariants({
-                          variant: "ghost",
-                          size: "icon-sm",
-                        }),
-                        "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
                       )}
-                      title="Delete country"
-                      aria-label={`Delete country “${c.name}”`}
+                      title="Edit"
+                      aria-label={`Edit country “${c.name}”`}
                     >
-                      <Trash2 className="size-4" aria-hidden />
-                    </button>
-                  </form>
+                      <Pencil className="size-4" aria-hidden />
+                    </Link>
+                    <ConfirmForm
+                      action={adminDeleteCountry.bind(null, c.id)}
+                      confirmMessage={confirmMessages.deleteCountry}
+                      className="inline-flex shrink-0"
+                    >
+                      <button
+                        type="submit"
+                        className={cn(
+                          buttonVariants({
+                            variant: "ghost",
+                            size: "icon-sm",
+                          }),
+                          "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                        )}
+                        title="Delete country"
+                        aria-label={`Delete country “${c.name}”`}
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </button>
+                    </ConfirmForm>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo } from "react";
 import { registerForEvent } from "@/app/actions/registrations";
+import { confirmMessages } from "@/lib/confirm-messages";
 import type { ActionState } from "@/app/actions/events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,15 @@ export function EventRegisterForm({ eventId, closed }: Props) {
   }
 
   return (
-    <form action={formAction} className="flex max-w-md flex-col gap-3">
+    <form
+      action={formAction}
+      onSubmit={(e) => {
+        if (!window.confirm(confirmMessages.registerEvent)) {
+          e.preventDefault();
+        }
+      }}
+      className="flex max-w-md flex-col gap-3"
+    >
       <div className="space-y-2">
         <Label htmlFor={`ev-reg-name-${eventId}`}>Name</Label>
         <Input

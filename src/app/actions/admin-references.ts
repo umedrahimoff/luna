@@ -34,6 +34,20 @@ function cityErrDetail(cityId: number, msg: string): never {
   redirect(`/admin/references/cities/${cityId}?e=${encodeURIComponent(msg)}`);
 }
 
+function categoryErrList(msg: string): never {
+  redirect(`/admin/references/categories?e=${encodeURIComponent(msg)}`);
+}
+
+function categoryCreateError(msg: string): never {
+  redirect(`/admin/references/categories/new?e=${encodeURIComponent(msg)}`);
+}
+
+function categoryErrDetail(categoryId: number, msg: string): never {
+  redirect(
+    `/admin/references/categories/${categoryId}?e=${encodeURIComponent(msg)}`,
+  );
+}
+
 function normalizeCode2(raw: string): string | null {
   const s = raw.trim().toUpperCase();
   if (!s) return null;
@@ -252,4 +266,95 @@ export async function adminDeleteCity(cityIdRaw: string | number): Promise<void>
   revalidatePath("/admin/references/cities");
   revalidatePath("/admin/references/countries");
   redirect("/admin/references/cities");
+}
+
+export async function adminCreateCategory(formData: FormData): Promise<void> {
+  await requireStaff();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name || name.length > 80) {
+    categoryCreateError("Name must be 80 characters or less");
+  }
+  let slug = slugify(name);
+  const exists = await db.category.findUnique({ where: { slug } });
+  if (exists) {
+    slug = `${slug}-${Date.now().toString(36)}`;
+  }
+  try {
+    await db.category.create({ data: { name, slug } });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      categoryCreateError("This slug is already taken");
+    }
+    throw e;
+  }
+  revalidatePath("/");
+  revalidatePath("/admin/references/categories");
+  revalidatePath("/admin/references/categories/new");
+  revalidatePath("/events/new");
+  redirect("/admin/references/categories");
+}
+
+export async function adminDeleteCategory(
+  categoryIdRaw: string | number,
+): Promise<void> {
+  await requireStaff();
+  const categoryId = parseRecordId(categoryIdRaw);
+  if (categoryId == null) categoryErrList("Invalid id");
+  const n = await db.event.count({ where: { categoryId } });
+  if (n > 0) {
+    categoryErrList(`Cannot delete: ${n} event(s) use this category`);
+  }
+  await db.category.delete({ where: { id: categoryId } });
+  revalidatePath("/");
+  revalidatePath("/admin/references/categories");
+  redirect("/admin/references/categories");
+}
+
+export async function adminDeleteCategoryFromDetail(
+  categoryIdRaw: string | number,
+): Promise<void> {
+  await requireStaff();
+  const categoryId = parseRecordId(categoryIdRaw);
+  if (categoryId == null) categoryErrList("Invalid id");
+  const n = await db.event.count({ where: { categoryId } });
+  if (n > 0) {
+    categoryErrDetail(
+      categoryId,
+      `Cannot delete: ${n} event(s) use this category`,
+    );
+  }
+  await db.category.delete({ where: { id: categoryId } });
+  revalidatePath("/");
+  revalidatePath("/admin/references/categories");
+  redirect("/admin/references/categories");
+}
+
+export async function adminUpdateCategory(
+  categoryIdRaw: string | number,
+  formData: FormData,
+): Promise<void> {
+  await requireStaff();
+  const categoryId = parseRecordId(categoryIdRaw);
+  if (categoryId == null) categoryErrList("Invalid id");
+  const name = String(formData.get("name") ?? "").trim();
+  const slugInput = String(formData.get("slug") ?? "").trim();
+  if (!name || name.length > 80) {
+    categoryErrDetail(categoryId, "Name must be 80 characters or less");
+  }
+  let slug = slugInput ? slugify(slugInput) : slugify(name);
+  if (!slug) slug = "category";
+  const taken = await db.category.findFirst({
+    where: { slug, NOT: { id: categoryId } },
+  });
+  if (taken) {
+    categoryErrDetail(categoryId, "This slug is already taken");
+  }
+  await db.category.update({
+    where: { id: categoryId },
+    data: { name, slug },
+  });
+  revalidatePath("/");
+  revalidatePath("/admin/references/categories");
+  revalidatePath(`/admin/references/categories/${categoryId}`);
+  redirect(`/admin/references/categories/${categoryId}`);
 }

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Pencil, Trash2, Users } from "lucide-react";
 import { db } from "@/lib/db";
 import { adminDeleteEvent } from "@/app/actions/admin-data";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { AdminListToolbar } from "@/components/admin-list-toolbar";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Label } from "@/components/ui/label";
@@ -129,7 +131,7 @@ export default async function AdminEventsPage({ searchParams }: Props) {
               <tr key={e.id} className="border-b last:border-0">
                 <td className="p-2.5">
                   <Link
-                    href={`/admin/events/${e.id}`}
+                    href={`/admin/events/${e.id}/edit`}
                     className="text-primary font-medium hover:underline"
                   >
                     {e.title}
@@ -157,7 +159,7 @@ export default async function AdminEventsPage({ searchParams }: Props) {
                 <td className="p-2.5 text-right whitespace-nowrap">
                   <div className="flex flex-row flex-nowrap items-center justify-end gap-0.5">
                     <Link
-                      href={`/admin/events/${e.id}#attendees`}
+                      href={`/admin/events/${e.id}/edit#attendees`}
                       className={cn(
                         buttonVariants({ variant: "ghost", size: "icon-sm" }),
                       )}
@@ -176,8 +178,9 @@ export default async function AdminEventsPage({ searchParams }: Props) {
                     >
                       <Pencil className="size-4" aria-hidden />
                     </Link>
-                    <form
+                    <ConfirmForm
                       action={adminDeleteEvent.bind(null, e.id)}
+                      confirmMessage={confirmMessages.deleteEvent}
                       className="inline-flex shrink-0"
                     >
                       <button
@@ -194,7 +197,7 @@ export default async function AdminEventsPage({ searchParams }: Props) {
                       >
                         <Trash2 className="size-4" aria-hidden />
                       </button>
-                    </form>
+                    </ConfirmForm>
                   </div>
                 </td>
               </tr>

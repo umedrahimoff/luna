@@ -5,7 +5,7 @@ type Props = {
   searchParams: Promise<{ q?: string; sort?: string }>;
 };
 
-/** Old URL: redirects to the unified event detail page (Attendees section). */
+/** Old URL: redirects to edit (Attendees section). */
 export default async function AdminEventParticipantsRedirect({
   params,
   searchParams,
@@ -17,6 +17,6 @@ export default async function AdminEventParticipantsRedirect({
   if (sp.sort === "desc") qs.set("sort", "desc");
   const query = qs.toString();
   permanentRedirect(
-    `/admin/events/${encodeURIComponent(id)}${query ? `?${query}` : ""}#attendees`,
+    `/admin/events/${encodeURIComponent(id)}/edit${query ? `?${query}` : ""}#attendees`,
   );
 }

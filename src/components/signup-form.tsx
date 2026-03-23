@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo } from "react";
 import { registerUser, type AuthState } from "@/app/actions/user-auth";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,11 @@ export function SignupForm() {
   return (
     <form
       action={formAction}
+      onSubmit={(e) => {
+        if (!window.confirm(confirmMessages.signUp)) {
+          e.preventDefault();
+        }
+      }}
       className="flex w-full min-w-0 flex-col gap-3"
     >
       <div className="w-full space-y-2">

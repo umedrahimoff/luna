@@ -3,30 +3,56 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { logoutUser } from "@/app/actions/user-auth";
+import { avatarBackgroundFromEmail, initialsFromName } from "@/lib/avatar-style";
 import { cn } from "@/lib/utils";
 
 export type HeaderUser = {
   name: string;
   email: string;
+  username: string | null;
+  avatarUrl: string | null;
 };
 
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
+function UserAvatar({
+  user,
+  sizeClass,
+  textClass,
+}: {
+  user: HeaderUser;
+  sizeClass: string;
+  textClass: string;
+}) {
+  const initials = initialsFromName(user.name);
+  const bg = avatarBackgroundFromEmail(user.email);
+  if (user.avatarUrl) {
     return (
-      parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
-    ).toUpperCase();
+      <span
+        className={cn(
+          "relative block shrink-0 overflow-hidden rounded-full ring-1 ring-black/10",
+          sizeClass,
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={user.avatarUrl}
+          alt=""
+          className="size-full object-cover"
+        />
+      </span>
+    );
   }
-  return name.slice(0, 2).toUpperCase() || "?";
-}
-
-function avatarBackground(email: string): string {
-  let h = 0;
-  for (let i = 0; i < email.length; i += 1) {
-    h = email.charCodeAt(i) + ((h << 5) - h);
-  }
-  const hue = Math.abs(h) % 360;
-  return `oklch(0.52 0.14 ${hue})`;
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-full font-semibold text-white shadow-inner",
+        sizeClass,
+        textClass,
+      )}
+      style={{ backgroundColor: bg }}
+    >
+      {initials}
+    </span>
+  );
 }
 
 function handleFromEmail(email: string): string {
@@ -64,9 +90,6 @@ export function UserHeaderMenu({ user, showAdminLink }: Props) {
     };
   }, [open]);
 
-  const initials = initialsFromName(user.name);
-  const bg = avatarBackground(user.email);
-
   return (
     <div ref={rootRef} className="relative shrink-0">
       <button
@@ -76,14 +99,13 @@ export function UserHeaderMenu({ user, showAdminLink }: Props) {
         aria-haspopup="menu"
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((v) => !v)}
+        title={user.email}
       >
-        <span
-          className="flex size-9 items-center justify-center rounded-full text-xs font-semibold text-white shadow-inner"
-          style={{ backgroundColor: bg }}
-          title={user.email}
-        >
-          {initials}
-        </span>
+        <UserAvatar
+          user={user}
+          sizeClass="size-9"
+          textClass="text-xs"
+        />
       </button>
 
       {open ? (
@@ -95,13 +117,11 @@ export function UserHeaderMenu({ user, showAdminLink }: Props) {
         >
           <div className="border-border border-b px-3 pb-3 pt-1">
             <div className="flex items-center gap-3">
-              <span
-                className="flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-                style={{ backgroundColor: bg }}
-                aria-hidden
-              >
-                {initials}
-              </span>
+              <UserAvatar
+                user={user}
+                sizeClass="size-11"
+                textClass="text-sm"
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{user.name}</p>
                 <p className="text-muted-foreground truncate text-xs">
@@ -111,21 +131,31 @@ export function UserHeaderMenu({ user, showAdminLink }: Props) {
             </div>
           </div>
           <div className="flex flex-col gap-0.5 px-1.5 pt-2 pb-1">
+            {user.username ? (
+              <Link
+                href={`/u/${user.username}`}
+                role="menuitem"
+                className={menuItemClass}
+                onClick={() => setOpen(false)}
+              >
+                Public profile
+              </Link>
+            ) : null}
             <Link
               href="/me"
               role="menuitem"
               className={menuItemClass}
               onClick={() => setOpen(false)}
             >
-              View profile
+              Profile & settings
             </Link>
             <Link
-              href="/me"
+              href="/me?tab=events"
               role="menuitem"
               className={menuItemClass}
               onClick={() => setOpen(false)}
             >
-              Settings
+              My events
             </Link>
             {showAdminLink ? (
               <Link

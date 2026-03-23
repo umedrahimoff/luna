@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import {
   adminDeleteCategoryFromDetail,
   adminUpdateCategory,
-} from "@/app/actions/admin-data";
+} from "@/app/actions/admin-references";
 import {
   AdminEntityLayout,
   adminDetailFormCardClass,
 } from "@/components/admin-entity-layout";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { AdminTechnicalAside } from "@/components/admin-technical-aside";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -85,8 +87,9 @@ export default async function AdminCategoryDetailPage({
         </p>
       </div>
 
-      <form
+      <ConfirmForm
         action={adminUpdateCategory.bind(null, category.id)}
+        confirmMessage={confirmMessages.save}
         className={adminDetailFormCardClass}
       >
         <div className="space-y-2">
@@ -112,7 +115,7 @@ export default async function AdminCategoryDetailPage({
         <Button type="submit" className="w-full sm:w-auto">
           Save
         </Button>
-      </form>
+      </ConfirmForm>
 
       <p className="text-muted-foreground max-w-lg text-sm leading-relaxed">
         Events using this category:{" "}
@@ -130,7 +133,10 @@ export default async function AdminCategoryDetailPage({
       </p>
 
       <div className="border-t pt-4">
-        <form action={adminDeleteCategoryFromDetail.bind(null, category.id)}>
+        <ConfirmForm
+          action={adminDeleteCategoryFromDetail.bind(null, category.id)}
+          confirmMessage={confirmMessages.deleteCategory}
+        >
           <Button
             type="submit"
             variant="destructive"
@@ -144,7 +150,7 @@ export default async function AdminCategoryDetailPage({
           >
             Delete category
           </Button>
-        </form>
+        </ConfirmForm>
         {!canDelete ? (
           <p className="text-muted-foreground mt-2 text-xs">
             Deletion is blocked while events use this category.

@@ -1,15 +1,35 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { db } from "@/lib/db";
+import { splitDisplayName } from "@/lib/display-name";
 import { requireUser } from "@/lib/require-user";
-import { EventCard } from "@/components/event-card";
-import { buttonVariants } from "@/components/ui/button-variants";
-import { cn } from "@/lib/utils";
+import { MePageClient } from "@/components/me/me-page-client";
 
-export default async function MePage() {
-  const user = await requireUser();
+function MeFallback() {
+  return (
+    <div className="flex flex-col gap-4 animate-pulse">
+      <div className="bg-muted h-8 w-48 rounded-md" />
+      <div className="bg-muted h-4 w-full max-w-md rounded-md" />
+      <div className="bg-muted mt-4 h-10 w-full rounded-lg" />
+      <div className="bg-muted h-40 w-full rounded-xl" />
+    </div>
+  );
+}
+
+async function MeContent() {
+  const session = await requireUser();
+  const user = await db.user.findUnique({
+    where: { id: session.id },
+    select: { name: true, email: true, bio: true, username: true, avatarUrl: true },
+  });
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const { firstName, lastName } = splitDisplayName(user.name);
+
   const events = await db.event.findMany({
-    where: { userId: user.id },
-    orderBy: { startsAt: "asc" },
+    where: { userId: session.id },
+    orderBy: { startsAt: "desc" },
     include: {
       _count: { select: { registrations: true } },
       category: { select: { name: true } },
@@ -17,56 +37,24 @@ export default async function MePage() {
   });
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            My events
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Signed in as <span className="text-foreground">{user.name}</span> (
-            {user.email})
-          </p>
-        </div>
-        <Link
-          href="/events/new"
-          className={cn(buttonVariants({ size: "sm" }), "w-fit shrink-0")}
-        >
-          New event
-        </Link>
-      </div>
-      {events.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          You have no events yet.{" "}
-          <Link href="/events/new" className="text-primary underline">
-            Create one
-          </Link>
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {events.map((e) => (
-            <li key={e.id} className="flex flex-col gap-2">
-              <EventCard
-                event={{
-                  ...e,
-                  category: e.category,
-                }}
-                registeredCount={e._count.registrations}
-                capacity={e.capacity}
-              />
-              <Link
-                href={`/${e.publicCode}/edit`}
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  "w-fit",
-                )}
-              >
-                Edit
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <MePageClient
+      user={{
+        firstName,
+        lastName,
+        email: user.email,
+        bio: user.bio,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+      }}
+      events={events}
+    />
+  );
+}
+
+export default function MePage() {
+  return (
+    <Suspense fallback={<MeFallback />}>
+      <MeContent />
+    </Suspense>
   );
 }

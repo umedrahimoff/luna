@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Event } from "@prisma/client";
 import { AdminEventAttendeesSection } from "@/components/admin-event-attendees-section";
-import { AdminEventDetailTabNav } from "@/components/admin-event-detail-tab-nav";
+import { AdminEventEditPanels } from "@/components/admin-event-edit-panels";
 import { AdminEntityLayout } from "@/components/admin-entity-layout";
 import { AdminTechnicalAside } from "@/components/admin-technical-aside";
 import { EventForm } from "@/components/event-form";
@@ -86,70 +86,65 @@ export default async function AdminEditEventPage({
     select: { id: true, name: true },
   });
 
+  const afterSave = `/admin/events/${encodeURIComponent(idRaw)}/edit`;
+
   const main = (
-    <>
-      <div className="flex flex-wrap items-center gap-2">
-        <Link
-          href="/admin/events"
-          className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-        >
-          ← Events
-        </Link>
-        <Link
-          href={`/admin/events/${encodeURIComponent(idRaw)}`}
-          className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-        >
-          Event detail
-        </Link>
-        <Link
-          href={`/${event.publicCode}`}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          Public page
-        </Link>
-      </div>
-      <div>
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/events"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+          >
+            ← Events
+          </Link>
+          <Link
+            href={`/${event.publicCode}`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            Public page
+          </Link>
+        </div>
         <h2 className="text-base font-semibold tracking-tight">
           Edit event (admin)
         </h2>
-        <p className="text-muted-foreground mt-1 text-sm">{event.title}</p>
       </div>
 
-      <div className="border-border bg-card scroll-mt-20 overflow-hidden rounded-xl border ring-1 ring-black/5">
-        <AdminEventDetailTabNav
-          overviewHref={`${editWithListQuery}#overview`}
-          attendeesHref={`${editWithListQuery}#attendees`}
-        />
-        <div className="bg-background space-y-8 p-4">
-          <section id="overview" className="scroll-mt-[5.5rem]">
-            <h3 className="sr-only">General Information</h3>
+      <AdminEventEditPanels
+        overviewHref={`${editWithListQuery}#overview`}
+        attendeesHref={`${editWithListQuery}#attendees`}
+        overview={
+          <>
+            <h3 id="tab-overview" className="sr-only">
+              General information
+            </h3>
             <EventForm
               mode="edit"
               event={event as Event}
               categories={categories}
-              afterUpdateRedirect={`/admin/events/${encodeURIComponent(idRaw)}`}
+              afterUpdateRedirect={afterSave}
             />
-          </section>
-
-          <section
-            id="attendees"
-            className="scroll-mt-[5.5rem] border-border border-t pt-8"
-          >
-            <h3 className="sr-only">Attendees</h3>
+          </>
+        }
+        attendees={
+          <>
+            <h3 id="tab-attendees" className="sr-only">
+              Attendees
+            </h3>
             <AdminEventAttendeesSection
               action={editBase}
               defaultQuery={q}
-              resetHref={`${editBase}#attendees`}
+              resetHref={`${editWithListQuery}#attendees`}
               showReset={hasFilters}
               filters={sortFilter}
               registrations={event.registrations}
               totalRegs={totalRegs}
               searchQuery={q}
             />
-          </section>
-        </div>
-      </div>
-    </>
+          </>
+        }
+      />
+    </div>
   );
 
   const aside = (
@@ -167,17 +162,7 @@ export default async function AdminEditEventPage({
         },
         {
           label: "Owner (record author)",
-          value: (
-            <>
-              {event.user.name}
-              <span className="text-muted-foreground mt-0.5 block text-[0.65rem] font-normal">
-                {event.user.email}
-              </span>
-              <span className="text-muted-foreground mt-1 block font-mono text-[0.6rem]">
-                userId: {event.user.id}
-              </span>
-            </>
-          ),
+          value: `${event.user.name} (${event.user.email})`,
         },
         {
           label: "Category",

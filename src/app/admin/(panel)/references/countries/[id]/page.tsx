@@ -8,6 +8,8 @@ import {
   AdminEntityLayout,
   adminDetailFormCardClass,
 } from "@/components/admin-entity-layout";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { AdminTechnicalAside } from "@/components/admin-technical-aside";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -89,8 +91,9 @@ export default async function AdminCountryDetailPage({
         </p>
       </div>
 
-      <form
+      <ConfirmForm
         action={adminUpdateCountry.bind(null, country.id)}
+        confirmMessage={confirmMessages.save}
         className={adminDetailFormCardClass}
       >
         <div className="space-y-2">
@@ -126,7 +129,7 @@ export default async function AdminCountryDetailPage({
         <Button type="submit" className="w-full sm:w-auto">
           Save
         </Button>
-      </form>
+      </ConfirmForm>
 
       <div className="space-y-2">
         <h3 className="text-sm font-medium">
@@ -163,7 +166,10 @@ export default async function AdminCountryDetailPage({
       </div>
 
       <div className="border-t pt-4">
-        <form action={adminDeleteCountryFromDetail.bind(null, country.id)}>
+        <ConfirmForm
+          action={adminDeleteCountryFromDetail.bind(null, country.id)}
+          confirmMessage={confirmMessages.deleteCountry}
+        >
           <Button
             type="submit"
             variant="destructive"
@@ -177,7 +183,7 @@ export default async function AdminCountryDetailPage({
           >
             Delete country
           </Button>
-        </form>
+        </ConfirmForm>
         {!canDelete ? (
           <p className="text-muted-foreground mt-2 text-xs">
             Deletion is blocked while cities exist.

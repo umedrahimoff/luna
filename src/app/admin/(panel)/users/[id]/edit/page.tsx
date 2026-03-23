@@ -2,10 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { UserRole } from "@prisma/client";
 import { adminUpdateUser } from "@/app/actions/admin-users";
-import {
-  AdminEntityLayout,
-  adminDetailFormCardClassComfortable,
-} from "@/components/admin-entity-layout";
+import { AdminEntityLayout } from "@/components/admin-entity-layout";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { AdminTechnicalAside } from "@/components/admin-technical-aside";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,27 +48,23 @@ export default async function AdminEditUserPage({ params, searchParams }: Props)
 
   const action = adminUpdateUser.bind(null, user.id);
 
+  const formCardClass =
+    "bg-card grid w-full min-w-0 grid-cols-1 gap-4 rounded-xl border p-4 ring-1 ring-black/5 sm:grid-cols-2";
+  const fieldShell = "min-w-0 space-y-2";
+  const span2 = "sm:col-span-2";
+
   const main = (
-    <>
-      <div className="flex flex-wrap items-center gap-2">
-        <Link
-          href="/admin/users"
-          className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-        >
-          ← Users
-        </Link>
-      </div>
-      <div>
-        <h2 className="text-base font-semibold tracking-tight">
-          Edit user
-        </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Events for this account:{" "}
-          <span className="text-foreground font-medium tabular-nums">
-            {user._count.events}
-          </span>
-          . Leave password empty to keep the current one.
-        </p>
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/users"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+          >
+            ← Users
+          </Link>
+        </div>
+        <h2 className="text-base font-semibold tracking-tight">Edit user</h2>
       </div>
 
       {error ? (
@@ -84,11 +79,8 @@ export default async function AdminEditUserPage({ params, searchParams }: Props)
         </p>
       ) : null}
 
-      <form
-        action={action}
-        className={adminDetailFormCardClassComfortable}
-      >
-        <div className="space-y-2">
+      <ConfirmForm action={action} confirmMessage={confirmMessages.save} className={formCardClass}>
+        <div className={fieldShell}>
           <Label htmlFor="name">Name</Label>
           <Input
             id="name"
@@ -99,7 +91,7 @@ export default async function AdminEditUserPage({ params, searchParams }: Props)
             defaultValue={user.name}
           />
         </div>
-        <div className="space-y-2">
+        <div className={fieldShell}>
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -110,7 +102,7 @@ export default async function AdminEditUserPage({ params, searchParams }: Props)
             defaultValue={user.email}
           />
         </div>
-        <div className="space-y-2">
+        <div className={fieldShell}>
           <Label htmlFor="role">Role</Label>
           <select
             id="role"
@@ -128,12 +120,12 @@ export default async function AdminEditUserPage({ params, searchParams }: Props)
               </option>
             ))}
           </select>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-muted-foreground text-xs leading-relaxed">
             User — signup and own events. Moderator — panel without the Users
             section. Administrator — full access.
           </p>
         </div>
-        <div className="space-y-2">
+        <div className={fieldShell}>
           <Label htmlFor="password">New password</Label>
           <Input
             id="password"
@@ -142,15 +134,17 @@ export default async function AdminEditUserPage({ params, searchParams }: Props)
             autoComplete="new-password"
             placeholder="Do not change"
           />
-          <p className="text-muted-foreground text-xs">
+          <p className="text-muted-foreground text-xs leading-relaxed">
             Leave empty to keep the current password.
           </p>
         </div>
-        <Button type="submit" className="w-full sm:w-auto">
-          Save
-        </Button>
-      </form>
-    </>
+        <div className={cn("flex justify-end", span2)}>
+          <Button type="submit" className="min-w-32 shrink-0">
+            Save
+          </Button>
+        </div>
+      </ConfirmForm>
+    </div>
   );
 
   const aside = (

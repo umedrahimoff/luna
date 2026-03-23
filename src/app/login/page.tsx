@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LoginForm } from "@/components/login-form";
+import { ArrowLeft } from "lucide-react";
+import { TelegramLoginForm } from "@/components/auth/telegram-login-form";
 import { getSessionUser } from "@/lib/user-session";
 import { userSessionConfigured } from "@/lib/user-token";
 
-export const metadata = { title: "Sign in — Luna" };
+export const metadata = { title: "Вход — Luna" };
 
 type Props = { searchParams: Promise<{ next?: string }> };
 
@@ -20,26 +21,47 @@ export default async function LoginPage({ searchParams }: Props) {
   const configured = userSessionConfigured();
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-md flex-col gap-5 py-3">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
-        <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          No account?{" "}
-          <Link href="/register" className="text-primary font-medium underline">
-            Sign up
+    <div className="flex min-h-[calc(100dvh-2rem)] flex-col">
+      <div className="mb-2 flex justify-center sm:justify-start">
+        <Link
+          href="/discover"
+          className="text-zinc-400 hover:text-zinc-100 inline-flex items-center gap-1.5 text-sm"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          На главную
+        </Link>
+      </div>
+      <div className="mb-6">
+        <h1 className="text-zinc-50 text-2xl font-semibold tracking-tight">
+          Вход
+        </h1>
+        <p className="text-zinc-400 mt-3 text-sm">
+          Нет аккаунта?{" "}
+          <Link
+            href="/register"
+            className="text-zinc-100 font-medium underline underline-offset-4"
+          >
+            Регистрация
           </Link>
-          — then you can create events and register for them.
         </p>
       </div>
       {!configured ? (
-        <p className="text-muted-foreground text-sm">
-          Set <code className="text-foreground">LUNA_SESSION_SECRET</code> in{" "}
-          <code className="text-foreground">.env</code> (at least 16 characters)
-          and restart the server.
+        <p className="text-zinc-400 text-sm">
+          Задайте <code className="text-zinc-200">LUNA_SESSION_SECRET</code> в{" "}
+          <code className="text-zinc-200">.env</code> и перезапустите сервер.
         </p>
       ) : (
-        <LoginForm nextPath={nextPath} />
+        <TelegramLoginForm nextPath={nextPath} />
       )}
+      <footer className="text-zinc-500 mt-auto pt-12 text-center text-xs">
+        <Link href="/discover" className="hover:text-zinc-300">
+          Условия использования
+        </Link>
+        <span className="mx-2">·</span>
+        <Link href="/discover" className="hover:text-zinc-300">
+          Политика конфиденциальности
+        </Link>
+      </footer>
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { adminCreateCity } from "@/app/actions/admin-references";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,8 +50,9 @@ export default async function AdminNewCityPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <form
+      <ConfirmForm
         action={adminCreateCity}
+        confirmMessage={confirmMessages.createCity}
         className={adminDetailFormCardClass}
       >
         <div className="space-y-2">
@@ -94,7 +97,7 @@ export default async function AdminNewCityPage({ searchParams }: Props) {
         <Button type="submit" className="w-full sm:w-auto">
           Add
         </Button>
-      </form>
+      </ConfirmForm>
     </div>
   );
 }

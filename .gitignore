@@ -45,3 +45,7 @@ next-env.d.ts
 /prisma/dev.db-journal
 **/*.db
 **/*.db-journal
+
+# User-uploaded avatars (keep directory)
+/public/uploads/avatars/*
+!/public/uploads/avatars/.gitkeep

@@ -144,7 +144,8 @@ export function AdminPanelShell({
               <div className="border-border mt-0.5 ml-1 flex flex-col gap-0.5 border-l pl-2">
                 {referenceLinks.map((l) => {
                   const active =
-                    pathname === l.href || pathname.startsWith(`${l.href}/`);
+                    pathname === l.href ||
+                    pathname.startsWith(`${l.href}/`);
                   const Icon = l.icon;
                   return (
                     <Link

@@ -15,6 +15,9 @@ type Props = {
   resetHref?: string;
   /** Show Reset when filters are active or q is non-empty. */
   showReset?: boolean;
+  /** No extra card frame — use inside another panel. */
+  plain?: boolean;
+  className?: string;
 };
 
 /** Single row: search + optional filters (GET) so params are preserved. */
@@ -25,12 +28,18 @@ export function AdminListToolbar({
   filters,
   resetHref,
   showReset,
+  plain = false,
+  className,
 }: Props) {
   return (
     <form
       method="get"
       action={action}
-      className="bg-card flex flex-col gap-3 rounded-xl border p-3 ring-1 ring-black/5 sm:flex-row sm:flex-wrap sm:items-end"
+      className={cn(
+        "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end",
+        !plain && "bg-card rounded-xl border p-3 ring-1 ring-black/5",
+        className,
+      )}
     >
       <div className="flex min-w-[min(100%,12rem)] flex-1 flex-col gap-1.5">
         <Label htmlFor="admin-list-q" className="text-xs">

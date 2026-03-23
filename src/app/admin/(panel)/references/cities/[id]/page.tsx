@@ -5,6 +5,8 @@ import {
   AdminEntityLayout,
   adminDetailFormCardClass,
 } from "@/components/admin-entity-layout";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { AdminTechnicalAside } from "@/components/admin-technical-aside";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -86,8 +88,9 @@ export default async function AdminCityDetailPage({
         </p>
       </div>
 
-      <form
+      <ConfirmForm
         action={adminUpdateCity.bind(null, city.id)}
+        confirmMessage={confirmMessages.save}
         className={adminDetailFormCardClass}
       >
         <div className="space-y-2">
@@ -129,14 +132,17 @@ export default async function AdminCityDetailPage({
         <Button type="submit" className="w-full sm:w-auto">
           Save
         </Button>
-      </form>
+      </ConfirmForm>
 
       <div className="border-t pt-4">
-        <form action={adminDeleteCity.bind(null, city.id)}>
+        <ConfirmForm
+          action={adminDeleteCity.bind(null, city.id)}
+          confirmMessage={confirmMessages.deleteCity}
+        >
           <Button type="submit" variant="destructive" size="sm">
             Delete city
           </Button>
-        </form>
+        </ConfirmForm>
       </div>
     </>
   );

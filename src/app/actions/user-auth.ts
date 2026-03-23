@@ -68,7 +68,7 @@ export async function loginUser(
     };
   }
   const parsed = loginSchema.safeParse({
-    email: String(formData.get("email") ?? ""),
+    login: String(formData.get("login") ?? ""),
     password: String(formData.get("password") ?? ""),
   });
   if (!parsed.success) {
@@ -77,14 +77,18 @@ export async function loginUser(
       message: Object.values(parsed.error.flatten().fieldErrors)[0]?.[0],
     };
   }
-  const email = parsed.data.email.toLowerCase();
-  const user = await db.user.findUnique({ where: { email } });
+  const raw = parsed.data.login.trim().toLowerCase();
+  const user = await db.user.findFirst({
+    where: {
+      OR: [{ email: raw }, { username: raw }],
+    },
+  });
   if (!user) {
-    return { ok: false, message: "Invalid email or password" };
+    return { ok: false, message: "Неверный логин или пароль" };
   }
   const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
   if (!ok) {
-    return { ok: false, message: "Invalid email or password" };
+    return { ok: false, message: "Неверный логин или пароль" };
   }
   const token = createUserSessionToken(user.id);
   if (!token) {

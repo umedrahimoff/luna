@@ -19,7 +19,7 @@ type Props = {
   searchQuery: string;
 };
 
-/** Attendee list + toolbar for admin event detail or edit (same hash #attendees). */
+/** Attendee list + toolbar for admin event edit (#attendees). */
 export function AdminEventAttendeesSection({
   action,
   defaultQuery,
@@ -31,21 +31,20 @@ export function AdminEventAttendeesSection({
   searchQuery,
 }: Props) {
   return (
-    <>
+    <div className="flex flex-col gap-3">
       <p className="text-muted-foreground text-sm">
         People who registered for this event ({totalRegs} total).
       </p>
-      <div className="mt-4">
-        <AdminListToolbar
-          action={action}
-          defaultQuery={defaultQuery}
-          placeholder="Attendee name or email"
-          filters={filters}
-          resetHref={resetHref}
-          showReset={showReset}
-        />
-      </div>
-      <div className="mt-3 overflow-x-auto rounded-xl border">
+      <AdminListToolbar
+        action={action}
+        defaultQuery={defaultQuery}
+        placeholder="Attendee name or email"
+        filters={filters}
+        resetHref={resetHref}
+        showReset={showReset}
+        plain
+      />
+      <div className="overflow-x-auto rounded-lg border">
         <table className="w-full min-w-[480px] text-left text-sm">
           <thead className="bg-muted/50 border-b">
             <tr>
@@ -71,17 +70,17 @@ export function AdminEventAttendeesSection({
         </table>
       </div>
       {registrations.length === 0 ? (
-        <p className="text-muted-foreground mt-3 text-sm">
+        <p className="text-muted-foreground text-sm">
           {searchQuery
             ? "No matches — try a different search."
             : "No registrations yet."}
         </p>
       ) : null}
       {searchQuery && registrations.length > 0 ? (
-        <p className="text-muted-foreground mt-2 text-xs">
+        <p className="text-muted-foreground text-xs">
           Showing {registrations.length} of {totalRegs} attendees.
         </p>
       ) : null}
-    </>
+    </div>
   );
 }

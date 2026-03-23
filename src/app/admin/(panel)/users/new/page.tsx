@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 import { adminCreateUser } from "@/app/actions/admin-users";
+import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,8 +49,9 @@ export default async function AdminNewUserPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <form
+      <ConfirmForm
         action={adminCreateUser}
+        confirmMessage={confirmMessages.createUser}
         className={adminDetailFormCardClassComfortable}
       >
         <div className="space-y-2">
@@ -98,7 +101,7 @@ export default async function AdminNewUserPage({ searchParams }: Props) {
         <Button type="submit" className="w-full sm:w-auto">
           Create
         </Button>
-      </form>
+      </ConfirmForm>
     </div>
   );
 }

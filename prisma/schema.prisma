@@ -18,10 +18,23 @@ enum UserRole {
   ADMIN
 }
 
+enum TelegramAuthKind {
+  REGISTER
+  LOGIN
+}
+
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
   name         String
+  /** Linked Telegram user (from /start); used to send login codes. */
+  telegramUserId BigInt? @unique
+  /** Optional bio for host profile on public pages. */
+  bio          String?
+  /** Public handle for profile URL /u/{username} (lowercase). */
+  username     String?  @unique
+  /** Optional profile photo (path under /public, e.g. /uploads/avatars/1.png). */
+  avatarUrl    String?
   passwordHash String
   role         UserRole @default(USER)
   createdAt    DateTime @default(now())
@@ -30,6 +43,20 @@ model User {
 
   @@index([email])
   @@index([role])
+}
+
+/** One-time codes: REGISTER from /start in Telegram; LOGIN for code sign-in. */
+model TelegramAuthCode {
+  id             Int              @id @default(autoincrement())
+  code           String           @unique
+  kind           TelegramAuthKind
+  telegramUserId BigInt
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  @@index([code])
+  @@index([telegramUserId])
 }
 
 model Category {
