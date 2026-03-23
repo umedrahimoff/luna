@@ -11,7 +11,7 @@ type Props = {
   imgClassName?: string;
 };
 
-/** Квадрат 1:1; при битой ссылке — плейсхолдер. */
+/** Square 1:1; placeholder if image URL fails. */
 export function EventCoverImage({
   src,
   alt,
@@ -24,12 +24,12 @@ export function EventCoverImage({
   return (
     <div
       className={cn(
-        "relative aspect-square shrink-0 overflow-hidden rounded-xl bg-muted",
+        "relative aspect-square shrink-0 overflow-hidden rounded-lg bg-muted",
         className,
       )}
     >
       {showImg ? (
-        // eslint-disable-next-line @next/next/no-img-element -- произвольные URL от организатора
+        // eslint-disable-next-line @next/next/no-img-element -- arbitrary organizer URLs
         <img
           src={src}
           alt={alt}

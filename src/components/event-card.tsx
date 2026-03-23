@@ -3,18 +3,16 @@ import { EventFormat, type Event } from "@prisma/client";
 import { MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EventCoverImage } from "@/components/event-cover-image";
-import {
-  formatEventListDate,
-  formatEventTime,
-  formatLabel,
-} from "@/lib/format";
+import { formatEventCardWhen, formatLabel } from "@/lib/format";
 
 type Props = {
   event: Pick<
     Event,
     | "id"
+    | "publicCode"
     | "title"
     | "startsAt"
+    | "endsAt"
     | "format"
     | "location"
     | "coverImageUrl"
@@ -26,28 +24,24 @@ type Props = {
 };
 
 /**
- * Карточка как на Luma: слева метаданные, справа обложка 1:1; вся карточка ведёт на страницу события (там регистрация).
+ * Luma-style card: metadata left, 1:1 cover right; whole card links to the event page (registration there).
  */
 export function EventCard({ event, registeredCount, capacity }: Props) {
   return (
     <Link
-      href={`/events/${event.id}`}
-      className="group focus-visible:ring-ring block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      aria-label={`Открыть страницу события: ${event.title}`}
+      href={`/${event.publicCode}`}
+      className="group focus-visible:ring-ring block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      aria-label={`Open event page: ${event.title}`}
     >
-      <article className="border-border/80 bg-card/60 flex items-start gap-4 rounded-2xl border p-4 shadow-sm ring-1 ring-black/[0.04] transition-[box-shadow,transform] hover:shadow-md dark:ring-white/[0.06] sm:gap-5 sm:p-5">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <p className="text-muted-foreground text-xs font-medium tabular-nums sm:text-sm">
+      <article className="border-border/80 bg-card/60 flex items-start gap-3 rounded-xl border p-3 shadow-sm ring-1 ring-black/[0.04] transition-[box-shadow,transform] hover:shadow-md dark:ring-white/[0.06] sm:gap-4 sm:p-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <p className="text-muted-foreground text-xs font-medium tabular-nums">
             <time dateTime={event.startsAt.toISOString()}>
-              {formatEventTime(event.startsAt)}
+              {formatEventCardWhen(event.startsAt, event.endsAt)}
             </time>
-            <span className="text-muted-foreground/60 mx-1.5">·</span>
-            <span className="uppercase tracking-wide">
-              {formatEventListDate(event.startsAt)}
-            </span>
           </p>
 
-          <h3 className="text-foreground group-hover:text-primary text-lg leading-snug font-semibold tracking-tight sm:text-xl">
+          <h3 className="text-foreground group-hover:text-primary text-base leading-snug font-semibold tracking-tight sm:text-lg">
             {event.title}
           </h3>
 
@@ -81,19 +75,19 @@ export function EventCard({ event, registeredCount, capacity }: Props) {
                 variant="outline"
                 className="rounded-lg px-2.5 py-0.5 text-xs"
               >
-                {registeredCount}/{capacity} мест
+                {registeredCount}/{capacity} spots
               </Badge>
             )}
           </div>
 
-          <div className="border-border/50 mt-auto flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-dashed pt-3">
-            <span className="text-foreground text-sm font-semibold tabular-nums">
+          <div className="border-border/50 mt-auto flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-dashed pt-2">
+            <span className="text-foreground text-xs font-semibold tabular-nums sm:text-sm">
               +{registeredCount}
             </span>
-            <span className="text-muted-foreground text-xs">зарегистрировано</span>
+            <span className="text-muted-foreground text-xs">registered</span>
             {capacity != null && (
               <span className="text-muted-foreground/80 text-xs">
-                · лимит {capacity}
+                · cap {capacity}
               </span>
             )}
           </div>
@@ -102,7 +96,7 @@ export function EventCard({ event, registeredCount, capacity }: Props) {
         <EventCoverImage
           src={event.coverImageUrl}
           alt=""
-          className="self-start w-[5.25rem] sm:w-28 md:w-32"
+          className="self-start w-[4.75rem] sm:w-24 md:w-28"
         />
       </article>
     </Link>

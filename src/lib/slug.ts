@@ -1,4 +1,4 @@
-/** Латиница для URL; кириллица транслитерируется грубо. */
+/** Latin slugs for URLs; Cyrillic is roughly transliterated. */
 const map: Record<string, string> = {
   а: "a",
   б: "b",

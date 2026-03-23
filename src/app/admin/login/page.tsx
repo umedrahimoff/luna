@@ -1,42 +1,46 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AdminLoginForm } from "@/components/admin-login-form";
-import { adminAuthConfigured, isAdminSession } from "@/lib/admin-auth";
+import { getStaffContext } from "@/lib/staff-access";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { cn } from "@/lib/utils";
 
 export const metadata = {
-  title: "Вход администратора — Luna",
+  title: "Admin sign in — Luna",
 };
 
 export default async function AdminLoginPage() {
-  if (await isAdminSession()) {
+  if (await getStaffContext()) {
     redirect("/admin");
   }
 
-  const configured = adminAuthConfigured();
-
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-8 py-8">
+    <div className="mx-auto flex max-w-lg flex-col gap-5 py-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Админ-панель Luna
+        <h1 className="text-xl font-semibold tracking-tight">
+          Moderation panel
         </h1>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          Доступ только для глобальных администраторов: все события, категории и
-          участники в одном месте.
+          Sign in with an account that has the{" "}
+          <strong className="text-foreground">moderator</strong> or{" "}
+          <strong className="text-foreground">administrator</strong> role.
+          Roles are assigned under Admin → Users (administrators only).
         </p>
+        <Link
+          href="/login?next=/admin"
+          className={cn(
+            buttonVariants({ variant: "default", size: "sm" }),
+            "mt-4 inline-flex",
+          )}
+        >
+          Sign in via site
+        </Link>
       </div>
-      {!configured ? (
-        <div className="rounded-xl border border-dashed p-4 text-sm">
-          <p className="font-medium">Вход выключен</p>
-          <p className="text-muted-foreground mt-2">
-            В файле <code className="text-foreground">.env</code> задайте{" "}
-            <code className="text-foreground">LUNA_ADMIN_SECRET</code> (не короче
-            16 символов) и <code className="text-foreground">LUNA_ADMIN_PASSWORD</code>
-            , затем перезапустите сервер.
-          </p>
-        </div>
-      ) : (
-        <AdminLoginForm />
-      )}
+
+      <p className="text-muted-foreground text-xs leading-relaxed">
+        There is no separate admin password. The first administrator must be
+        promoted via <code className="text-foreground">LUNA_INITIAL_ADMIN_EMAIL</code>{" "}
+        (see seed / env) or by editing the database.
+      </p>
     </div>
   );
 }

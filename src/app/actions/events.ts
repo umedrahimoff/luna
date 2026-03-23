@@ -2,16 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { EventFormat } from "@prisma/client";
+import { EventFormat, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { isAdminSession } from "@/lib/admin-auth";
-import { getOrganizerId } from "@/lib/organizer";
+import { isStaffAccess } from "@/lib/staff-access";
+import { getSessionUser } from "@/lib/user-session";
 import {
   capacityFromForm,
   coverUrlFromForm,
   eventFormSchema,
+  parseEndsAt,
   parseStartsAt,
 } from "@/lib/schemas/event";
+import { parseRecordId } from "@/lib/record-id";
+import { generateEventPublicCode } from "@/lib/event-public-code";
 
 export type ActionState = {
   ok: boolean;
@@ -24,6 +27,7 @@ function formDataToObject(formData: FormData) {
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? ""),
     startsAt: String(formData.get("startsAt") ?? ""),
+    endsAt: String(formData.get("endsAt") ?? ""),
     format: String(formData.get("format") ?? "") as EventFormat,
     location: String(formData.get("location") ?? "") || undefined,
     capacity: String(formData.get("capacity") ?? ""),
@@ -36,6 +40,10 @@ export async function createEvent(
   _prev: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
+  const user = await getSessionUser();
+  if (!user) {
+    redirect("/login");
+  }
   const parsed = eventFormSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) {
     return {
@@ -50,7 +58,20 @@ export async function createEvent(
   if (!startsAt) {
     return {
       ok: false,
-      fieldErrors: { startsAt: ["Некорректная дата"] },
+      fieldErrors: { startsAt: ["Invalid date"] },
+    };
+  }
+  const endsAt = parseEndsAt(parsed.data.endsAt);
+  if (!endsAt) {
+    return {
+      ok: false,
+      fieldErrors: { endsAt: ["Invalid date"] },
+    };
+  }
+  if (endsAt.getTime() <= startsAt.getTime()) {
+    return {
+      ok: false,
+      fieldErrors: { endsAt: ["End must be after start"] },
     };
   }
   const category = await db.category.findUnique({
@@ -59,26 +80,48 @@ export async function createEvent(
   if (!category) {
     return {
       ok: false,
-      fieldErrors: { categoryId: ["Категория не найдена"] },
+      fieldErrors: { categoryId: ["Category not found"] },
     };
   }
-  const organizerId = await getOrganizerId();
-  await db.event.create({
-    data: {
-      title: parsed.data.title,
-      description: parsed.data.description,
-      startsAt,
-      format: parsed.data.format,
-      location:
-        parsed.data.format === EventFormat.OFFLINE
-          ? parsed.data.location?.trim() ?? null
-          : null,
-      capacity: capacityFromForm(parsed.data.capacity),
-      coverImageUrl: coverUrlFromForm(parsed.data.coverImageUrl),
-      categoryId: category.id,
-      organizerId,
-    },
-  });
+  const baseData = {
+    title: parsed.data.title,
+    description: parsed.data.description,
+    startsAt,
+    endsAt,
+    format: parsed.data.format,
+    location:
+      parsed.data.format === EventFormat.OFFLINE
+        ? parsed.data.location?.trim() ?? null
+        : null,
+    capacity: capacityFromForm(parsed.data.capacity),
+    coverImageUrl: coverUrlFromForm(parsed.data.coverImageUrl),
+    categoryId: category.id,
+    userId: user.id,
+  };
+
+  let created = false;
+  for (let i = 0; i < 24; i++) {
+    const publicCode = generateEventPublicCode();
+    try {
+      await db.event.create({
+        data: { ...baseData, publicCode },
+      });
+      created = true;
+      break;
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === "P2002"
+      ) {
+        continue;
+      }
+      throw e;
+    }
+  }
+  if (!created) {
+    return { ok: false, message: "Could not generate event link code" };
+  }
+
   revalidatePath("/");
   revalidatePath("/me");
   revalidatePath("/admin");
@@ -87,10 +130,14 @@ export async function createEvent(
 }
 
 export async function updateEvent(
-  eventId: string,
+  eventIdRaw: string | number,
   _prev: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
+  const eventId = parseRecordId(eventIdRaw);
+  if (eventId == null) {
+    return { ok: false, message: "Invalid event id" };
+  }
   const redirectAfter = String(formData.get("_redirect") ?? "");
   const parsed = eventFormSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) {
@@ -106,14 +153,27 @@ export async function updateEvent(
   if (!startsAt) {
     return {
       ok: false,
-      fieldErrors: { startsAt: ["Некорректная дата"] },
+      fieldErrors: { startsAt: ["Invalid date"] },
     };
   }
-  const organizerId = await getOrganizerId();
-  const admin = await isAdminSession();
+  const endsAt = parseEndsAt(parsed.data.endsAt);
+  if (!endsAt) {
+    return {
+      ok: false,
+      fieldErrors: { endsAt: ["Invalid date"] },
+    };
+  }
+  if (endsAt.getTime() <= startsAt.getTime()) {
+    return {
+      ok: false,
+      fieldErrors: { endsAt: ["End must be after start"] },
+    };
+  }
+  const user = await getSessionUser();
+  const staff = await isStaffAccess();
   const existing = await db.event.findUnique({ where: { id: eventId } });
-  if (!existing || (!admin && existing.organizerId !== organizerId)) {
-    return { ok: false, message: "Нет прав на редактирование" };
+  if (!existing || (!staff && (!user || existing.userId !== user.id))) {
+    return { ok: false, message: "You do not have permission to edit this event" };
   }
   const category = await db.category.findUnique({
     where: { id: parsed.data.categoryId },
@@ -121,7 +181,7 @@ export async function updateEvent(
   if (!category) {
     return {
       ok: false,
-      fieldErrors: { categoryId: ["Категория не найдена"] },
+      fieldErrors: { categoryId: ["Category not found"] },
     };
   }
   await db.event.update({
@@ -130,6 +190,7 @@ export async function updateEvent(
       title: parsed.data.title,
       description: parsed.data.description,
       startsAt,
+      endsAt,
       format: parsed.data.format,
       location:
         parsed.data.format === EventFormat.OFFLINE
@@ -142,15 +203,15 @@ export async function updateEvent(
   });
   revalidatePath("/");
   revalidatePath("/me");
+  revalidatePath(`/${existing.publicCode}`);
+  revalidatePath(`/${existing.publicCode}/edit`);
   revalidatePath(`/events/${eventId}`);
   revalidatePath(`/events/${eventId}/edit`);
   revalidatePath("/admin");
   revalidatePath("/admin/events");
-  if (
-    admin &&
-    redirectAfter === "/admin/events"
-  ) {
+  revalidatePath(`/admin/events/${eventId}`);
+  if (staff && redirectAfter === "/admin/events") {
     redirect("/admin/events");
   }
-  redirect(`/events/${eventId}`);
+  redirect(`/${existing.publicCode}`);
 }

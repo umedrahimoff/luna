@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
-import { EventCard } from "@/components/event-card";
+import { PublicEventList } from "@/components/public-event-list";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { getSessionUser } from "@/lib/user-session";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -14,94 +14,43 @@ export default async function HomePage({
   searchParams: Promise<Search>;
 }) {
   const { category: categorySlug } = await searchParams;
-
-  const categories = await db.category.findMany({
-    orderBy: { name: "asc" },
-  });
-
-  const events = await db.event.findMany({
-    where: categorySlug
-      ? { category: { slug: categorySlug } }
-      : undefined,
-    orderBy: { startsAt: "asc" },
-    include: {
-      _count: { select: { registrations: true } },
-      category: { select: { name: true } },
-    },
-  });
+  const user = await getSessionUser();
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Ближайшие события
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight">Events</h1>
         <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-relaxed">
-          События по дате начала.{" "}
-          <strong className="font-medium text-foreground">
-            Чтобы записаться
-          </strong>
-          , откройте карточку — внизу страницы события форма регистрации (имя и
-          email). На самой карточке кнопки нет — как в Luma.
+          {user
+            ? "Events you have registered for (matched by your account email)."
+            : "Sign in to see events you have registered for."}
         </p>
       </div>
 
-      {categories.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+      {user ? (
+        <PublicEventList
+          categorySlug={categorySlug}
+          listBasePath="/"
+          registeredEmail={user.email}
+        />
+      ) : (
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Link
-            href="/"
+            href="/login?next=/"
+            className={cn(buttonVariants({ size: "sm" }), "w-fit")}
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/discover"
             className={cn(
-              buttonVariants({
-                variant: categorySlug ? "outline" : "secondary",
-                size: "sm",
-              }),
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "w-fit",
             )}
           >
-            Все
+            Discover all events
           </Link>
-          {categories.map((c) => (
-            <Link
-              key={c.id}
-              href={`/?category=${encodeURIComponent(c.slug)}`}
-              className={cn(
-                buttonVariants({
-                  variant:
-                    categorySlug === c.slug ? "secondary" : "outline",
-                  size: "sm",
-                }),
-              )}
-            >
-              {c.name}
-            </Link>
-          ))}
         </div>
-      )}
-
-      {events.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          {categorySlug
-            ? "В этой категории пока нет событий."
-            : "Пока нет событий."}{" "}
-          <Link href="/events/new" className="text-primary underline">
-            Создайте первое
-          </Link>
-          .
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-4">
-          {events.map((e) => (
-            <li key={e.id}>
-              <EventCard
-                event={{
-                  ...e,
-                  category: e.category,
-                }}
-                registeredCount={e._count.registrations}
-                capacity={e.capacity}
-              />
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );

@@ -1,18 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { MainShell } from "@/components/main-shell";
 import { SiteHeader } from "@/components/site-header";
-import { isAdminSession } from "@/lib/admin-auth";
+import { isStaffAccess } from "@/lib/staff-access";
+import { getSessionUser } from "@/lib/user-session";
 import "./globals.css";
 
 const inter = Inter({
-  subsets: ["latin", "cyrillic"],
+  subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Luna — события",
-  description: "Создавайте события и регистрируйтесь за пару шагов",
+  title: "Luna — events",
+  description: "Create events and register in a few steps",
 };
 
 export const viewport: Viewport = {
@@ -29,15 +31,23 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const admin = await isAdminSession();
+  const [staff, sessionUser] = await Promise.all([
+    isStaffAccess(),
+    getSessionUser(),
+  ]);
 
   return (
-    <html lang="ru" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans">
-        <SiteHeader showAdminLink={admin} />
-        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
-          {children}
-        </main>
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <body className="font-sans flex min-h-dvh flex-col">
+        <SiteHeader
+          showAdminLink={staff}
+          sessionUser={
+            sessionUser
+              ? { name: sessionUser.name, email: sessionUser.email }
+              : null
+          }
+        />
+        <MainShell>{children}</MainShell>
       </body>
     </html>
   );

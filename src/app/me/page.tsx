@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { getOrganizerId } from "@/lib/organizer";
+import { requireUser } from "@/lib/require-user";
 import { EventCard } from "@/components/event-card";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
 export default async function MePage() {
-  const organizerId = await getOrganizerId();
+  const user = await requireUser();
   const events = await db.event.findMany({
-    where: { organizerId },
+    where: { userId: user.id },
     orderBy: { startsAt: "asc" },
     include: {
       _count: { select: { registrations: true } },
@@ -17,33 +17,33 @@ export default async function MePage() {
   });
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Мои события
+          <h1 className="text-xl font-semibold tracking-tight">
+            My events
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Создание и редактирование доступны только с этого браузера (cookie
-            организатора).
+            Signed in as <span className="text-foreground">{user.name}</span> (
+            {user.email})
           </p>
         </div>
         <Link
           href="/events/new"
           className={cn(buttonVariants({ size: "sm" }), "w-fit shrink-0")}
         >
-          Новое событие
+          New event
         </Link>
       </div>
       {events.length === 0 ? (
         <p className="text-muted-foreground text-sm">
-          У вас пока нет событий.{" "}
+          You have no events yet.{" "}
           <Link href="/events/new" className="text-primary underline">
-            Создать
+            Create one
           </Link>
         </p>
       ) : (
-        <ul className="flex flex-col gap-4">
+        <ul className="flex flex-col gap-3">
           {events.map((e) => (
             <li key={e.id} className="flex flex-col gap-2">
               <EventCard
@@ -55,13 +55,13 @@ export default async function MePage() {
                 capacity={e.capacity}
               />
               <Link
-                href={`/events/${e.id}/edit`}
+                href={`/${e.publicCode}/edit`}
                 className={cn(
                   buttonVariants({ variant: "outline", size: "sm" }),
                   "w-fit",
                 )}
               >
-                Редактировать
+                Edit
               </Link>
             </li>
           ))}

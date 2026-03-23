@@ -1,12 +1,16 @@
+import { UserRole } from "@prisma/client";
 import { AdminPanelShell } from "@/components/admin-panel-shell";
-import { requireAdmin } from "@/lib/admin-guard";
+import { requireStaff } from "@/lib/admin-guard";
 
 export default async function AdminPanelLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireAdmin();
+  const staff = await requireStaff();
+  const canManageUsers = staff.role === UserRole.ADMIN;
 
-  return <AdminPanelShell>{children}</AdminPanelShell>;
+  return (
+    <AdminPanelShell canManageUsers={canManageUsers}>{children}</AdminPanelShell>
+  );
 }

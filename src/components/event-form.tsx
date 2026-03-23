@@ -13,7 +13,7 @@ import { createEvent, updateEvent } from "@/app/actions/events";
 import { toDatetimeLocalValue } from "@/lib/format";
 import Link from "next/link";
 
-export type EventCategoryOption = { id: string; name: string };
+export type EventCategoryOption = { id: number; name: string };
 
 type Props =
   | { mode: "create"; categories: EventCategoryOption[] }
@@ -48,33 +48,40 @@ export function EventForm(props: Props) {
     props.mode === "edit"
       ? toDatetimeLocalValue(props.event.startsAt)
       : "";
+  const defaultEndsAt =
+    props.mode === "edit"
+      ? toDatetimeLocalValue(props.event.endsAt)
+      : "";
 
   const afterRedirect =
     props.mode === "edit" ? props.afterUpdateRedirect : undefined;
 
   if (props.categories.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-xl border border-dashed p-6 text-sm">
-        <p className="text-foreground font-medium">Нет категорий</p>
+      <div className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+        <p className="text-foreground font-medium">No categories</p>
         <p className="mt-2">
-          Сначала глобальный администратор должен добавить категории в{" "}
-          <Link href="/admin/categories" className="text-primary underline">
-            панели администратора
-          </Link>
-          .
+          A global administrator must add categories in the{" "}
+          <Link href="/admin/references/categories" className="text-primary underline">
+            admin panel
+          </Link>{" "}
+          first.
         </p>
       </div>
     );
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form
+      action={formAction}
+      className="flex w-full min-w-0 flex-col gap-4"
+    >
       {afterRedirect ? (
         <input type="hidden" name="_redirect" value={afterRedirect} />
       ) : null}
 
       <div className="space-y-2">
-        <Label htmlFor="categoryId">Категория</Label>
+        <Label htmlFor="categoryId">Category</Label>
         <select
           id="categoryId"
           name="categoryId"
@@ -85,7 +92,7 @@ export function EventForm(props: Props) {
               : props.categories[0]!.id
           }
           className={cn(
-            "border-input bg-background min-h-11 w-full rounded-xl border px-4 py-3 text-base shadow-xs outline-none",
+            "border-input bg-background min-h-10 w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none",
             "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
           )}
         >
@@ -103,7 +110,7 @@ export function EventForm(props: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="title">Название</Label>
+        <Label htmlFor="title">Title</Label>
         <Input
           id="title"
           name="title"
@@ -120,7 +127,7 @@ export function EventForm(props: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Описание</Label>
+        <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
           name="description"
@@ -140,7 +147,7 @@ export function EventForm(props: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="coverImageUrl">Обложка (ссылка на изображение)</Label>
+        <Label htmlFor="coverImageUrl">Cover image (URL)</Label>
         <Input
           id="coverImageUrl"
           name="coverImageUrl"
@@ -153,8 +160,8 @@ export function EventForm(props: Props) {
           aria-invalid={!!fieldError(state.fieldErrors, "coverImageUrl")}
         />
         <p className="text-muted-foreground text-xs leading-relaxed">
-          Квадрат <strong className="font-medium text-foreground">1:1</strong>{" "}
-          смотрится лучше всего. Можно оставить пустым — будет плейсхолдер.
+          A square <strong className="font-medium text-foreground">1:1</strong>{" "}
+          image works best. Leave empty for a placeholder.
         </p>
         {fieldError(state.fieldErrors, "coverImageUrl") && (
           <p className="text-destructive text-sm">
@@ -163,25 +170,73 @@ export function EventForm(props: Props) {
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="startsAt">Дата и время</Label>
-        <Input
-          id="startsAt"
-          name="startsAt"
-          type="datetime-local"
-          required
-          defaultValue={defaultStartsAt}
-          aria-invalid={!!fieldError(state.fieldErrors, "startsAt")}
+      <div className="border-border bg-muted/30 relative rounded-xl border p-4 pl-9 ring-1 ring-black/5">
+        <div
+          className="border-border absolute top-8 bottom-10 left-[1.125rem] -translate-x-1/2 border-l border-dashed"
+          aria-hidden
         />
-        {fieldError(state.fieldErrors, "startsAt") && (
-          <p className="text-destructive text-sm">
-            {fieldError(state.fieldErrors, "startsAt")}
-          </p>
-        )}
+        <div className="relative space-y-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <div className="text-muted-foreground flex min-w-[4.5rem] items-center gap-2 text-sm font-medium">
+              <span
+                className="bg-muted-foreground size-2 shrink-0 rounded-full"
+                aria-hidden
+              />
+              Start
+            </div>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Label htmlFor="startsAt" className="sr-only">
+                Start date and time
+              </Label>
+              <Input
+                id="startsAt"
+                name="startsAt"
+                type="datetime-local"
+                required
+                defaultValue={defaultStartsAt}
+                className="max-w-md"
+                aria-invalid={!!fieldError(state.fieldErrors, "startsAt")}
+              />
+              {fieldError(state.fieldErrors, "startsAt") ? (
+                <p className="text-destructive text-sm">
+                  {fieldError(state.fieldErrors, "startsAt")}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <div className="text-muted-foreground flex min-w-[4.5rem] items-center gap-2 text-sm font-medium">
+              <span
+                className="border-muted-foreground size-2 shrink-0 rounded-full border-2 border-dashed bg-transparent"
+                aria-hidden
+              />
+              End
+            </div>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Label htmlFor="endsAt" className="sr-only">
+                End date and time
+              </Label>
+              <Input
+                id="endsAt"
+                name="endsAt"
+                type="datetime-local"
+                required
+                defaultValue={defaultEndsAt}
+                className="max-w-md"
+                aria-invalid={!!fieldError(state.fieldErrors, "endsAt")}
+              />
+              {fieldError(state.fieldErrors, "endsAt") ? (
+                <p className="text-destructive text-sm">
+                  {fieldError(state.fieldErrors, "endsAt")}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="format">Формат</Label>
+        <Label htmlFor="format">Format</Label>
         <select
           id="format"
           name="format"
@@ -192,12 +247,12 @@ export function EventForm(props: Props) {
               : EventFormat.ONLINE
           }
           className={cn(
-            "border-input bg-background min-h-11 w-full rounded-xl border px-4 py-3 text-base shadow-xs outline-none",
+            "border-input bg-background min-h-10 w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none",
             "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
           )}
         >
-          <option value={EventFormat.ONLINE}>Онлайн</option>
-          <option value={EventFormat.OFFLINE}>Офлайн</option>
+          <option value={EventFormat.ONLINE}>Online</option>
+          <option value={EventFormat.OFFLINE}>Offline</option>
         </select>
         {fieldError(state.fieldErrors, "format") && (
           <p className="text-destructive text-sm">
@@ -207,12 +262,12 @@ export function EventForm(props: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="location">Локация (для офлайна)</Label>
+        <Label htmlFor="location">Location (offline)</Label>
         <Input
           id="location"
           name="location"
           maxLength={500}
-          placeholder="Адрес или название площадки"
+          placeholder="Address or venue name"
           defaultValue={
             props.mode === "edit" ? props.event.location ?? "" : ""
           }
@@ -226,7 +281,7 @@ export function EventForm(props: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="capacity">Лимит участников (необязательно)</Label>
+        <Label htmlFor="capacity">Capacity limit (optional)</Label>
         <Input
           id="capacity"
           name="capacity"
@@ -234,7 +289,7 @@ export function EventForm(props: Props) {
           min={1}
           step={1}
           inputMode="numeric"
-          placeholder="Без лимита"
+          placeholder="No limit"
           defaultValue={
             props.mode === "edit" && props.event.capacity != null
               ? String(props.event.capacity)
@@ -259,10 +314,10 @@ export function EventForm(props: Props) {
         className="mt-1 w-full sm:w-auto sm:min-w-44"
       >
         {pending
-          ? "Сохранение…"
+          ? "Saving…"
           : props.mode === "create"
-            ? "Создать событие"
-            : "Сохранить изменения"}
+            ? "Create event"
+            : "Save changes"}
       </Button>
     </form>
   );

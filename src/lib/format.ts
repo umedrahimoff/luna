@@ -1,6 +1,6 @@
 import { EventFormat } from "@prisma/client";
 
-const dateFmt = new Intl.DateTimeFormat("ru-RU", {
+const dateFmt = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
   day: "numeric",
   month: "long",
@@ -13,32 +13,62 @@ export function formatEventDate(d: Date): string {
   return dateFmt.format(d);
 }
 
-const timeFmt = new Intl.DateTimeFormat("ru-RU", {
+/** Public / detail: human-readable start–end range. */
+export function formatEventDateRange(startsAt: Date, endsAt: Date): string {
+  if (startsAt.getTime() >= endsAt.getTime()) {
+    return formatEventDate(startsAt);
+  }
+  const sameDay = startsAt.toDateString() === endsAt.toDateString();
+  if (sameDay) {
+    const dayOnlyFmt = new Intl.DateTimeFormat("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    return `${dayOnlyFmt.format(startsAt)}, ${formatEventTime(startsAt)} – ${formatEventTime(endsAt)}`;
+  }
+  return `${formatEventDate(startsAt)} – ${formatEventDate(endsAt)}`;
+}
+
+const timeFmt = new Intl.DateTimeFormat("en-US", {
   hour: "2-digit",
   minute: "2-digit",
 });
 
-/** Время для карточки в списке (как на Luma). */
+/** List card time (Luma-style). */
 export function formatEventTime(d: Date): string {
   return timeFmt.format(d);
 }
 
-const listDateFmt = new Intl.DateTimeFormat("ru-RU", {
+const listDateFmt = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
   day: "numeric",
   month: "short",
 });
 
-/** Короткая дата под временем на карточке. */
+/** Short date under time on list cards. */
 export function formatEventListDate(d: Date): string {
   return listDateFmt.format(d);
 }
 
-export function formatLabel(format: EventFormat): string {
-  return format === EventFormat.ONLINE ? "Онлайн" : "Офлайн";
+/** Compact line for list cards (start–end). */
+export function formatEventCardWhen(startsAt: Date, endsAt: Date): string {
+  if (startsAt.getTime() >= endsAt.getTime()) {
+    return `${formatEventTime(startsAt)} · ${formatEventListDate(startsAt)}`;
+  }
+  const sameDay = startsAt.toDateString() === endsAt.toDateString();
+  if (sameDay) {
+    return `${formatEventTime(startsAt)}–${formatEventTime(endsAt)} · ${formatEventListDate(startsAt)}`;
+  }
+  return `${formatEventListDate(startsAt)} ${formatEventTime(startsAt)} → ${formatEventListDate(endsAt)} ${formatEventTime(endsAt)}`;
 }
 
-/** Для value input[type=datetime-local] в локальном времени браузера/сервера */
+export function formatLabel(format: EventFormat): string {
+  return format === EventFormat.ONLINE ? "Online" : "Offline";
+}
+
+/** Value for input[type=datetime-local] in local browser/server time */
 export function toDatetimeLocalValue(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const y = d.getFullYear();

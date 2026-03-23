@@ -5,12 +5,17 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { registrationSchema } from "@/lib/schemas/registration";
 import type { ActionState } from "@/app/actions/events";
+import { parseRecordId } from "@/lib/record-id";
 
 export async function registerForEvent(
-  eventId: string,
+  eventIdRaw: string | number,
   _prev: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
+  const eventId = parseRecordId(eventIdRaw);
+  if (eventId == null) {
+    return { ok: false, message: "Invalid event" };
+  }
   const parsed = registrationSchema.safeParse({
     name: String(formData.get("name") ?? ""),
     email: String(formData.get("email") ?? ""),
@@ -30,13 +35,13 @@ export async function registerForEvent(
     include: { _count: { select: { registrations: true } } },
   });
   if (!event) {
-    return { ok: false, message: "Событие не найдено" };
+    return { ok: false, message: "Event not found" };
   }
   if (
     event.capacity != null &&
     event._count.registrations >= event.capacity
   ) {
-    return { ok: false, message: "Регистрация закрыта: достигнут лимит мест" };
+    return { ok: false, message: "Registration closed: capacity reached" };
   }
 
   try {
@@ -51,13 +56,13 @@ export async function registerForEvent(
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return {
         ok: false,
-        message: "Вы уже зарегистрированы на это событие",
+        message: "You are already registered for this event",
       };
     }
     throw e;
   }
 
-  revalidatePath(`/events/${eventId}`);
+  revalidatePath(`/${event.publicCode}`);
   revalidatePath("/");
-  return { ok: true, message: "Вы успешно зарегистрированы" };
+  return { ok: true, message: "You are registered successfully" };
 }
