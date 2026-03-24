@@ -29,7 +29,7 @@ async function loadSessionUserRow(userId: number): Promise<SessionUser | null> {
         avatarUrl: string | null;
       }>
     >(
-      Prisma.sql`SELECT id, email, name, role, username, avatarUrl FROM User WHERE id = ${userId} LIMIT 1`,
+      Prisma.sql`SELECT "id", "email", "name", "role", "username", "avatarUrl" FROM "User" WHERE "id" = ${userId} LIMIT 1`,
     );
     const row = rows[0];
     if (!row) return null;
@@ -50,7 +50,7 @@ async function loadSessionUserRow(userId: number): Promise<SessionUser | null> {
         role: string;
       }>
     >(
-      Prisma.sql`SELECT id, email, name, role FROM User WHERE id = ${userId} LIMIT 1`,
+      Prisma.sql`SELECT "id", "email", "name", "role" FROM "User" WHERE "id" = ${userId} LIMIT 1`,
     );
     const row = rows[0];
     if (!row) return null;
