@@ -65,7 +65,7 @@ export default async function EventPage({ params }: Props) {
     .locationMapUrl;
   const meetingUrl = (event as typeof event & { meetingUrl?: string | null }).meetingUrl;
   let userRegisteredForEvent = false;
-  if (user && !canEdit) {
+  if (user) {
     const reg = await db.registration.findFirst({
       where: { eventId: event.id, email: user.email.toLowerCase() },
       select: { id: true },
@@ -89,7 +89,7 @@ export default async function EventPage({ params }: Props) {
           <EventCoverImage
             src={event.coverImageUrl}
             alt={event.title}
-            className="w-full rounded-xl ring-1 ring-black/5 dark:ring-white/10"
+            className="w-full aspect-[4/3] md:aspect-[16/10] lg:aspect-square max-h-[26rem] rounded-xl ring-1 ring-black/5 dark:ring-white/10"
           />
         </div>
 
@@ -207,6 +207,9 @@ export default async function EventPage({ params }: Props) {
           <EventRegisterForm
             eventId={event.id}
             closed={full}
+            isAuthenticated={!!user}
+            profileName={user?.name}
+            profileEmail={user?.email}
             isRegistered={userRegisteredForEvent}
             eventTitle={event.title}
             startsAtIso={event.startsAt.toISOString()}

@@ -6,28 +6,51 @@ import { db } from "@/lib/db";
 import { registrationSchema } from "@/lib/schemas/registration";
 import type { ActionState } from "@/app/actions/events";
 import { parseRecordId } from "@/lib/record-id";
+import { getSessionUser } from "@/lib/user-session";
+
+function hasUnsupportedJsonError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message : String(error ?? "");
+  return (
+    message.includes("Value JSON not supported") ||
+    message.includes("Conversion failed")
+  );
+}
 
 export async function registerForEvent(
   eventIdRaw: string | number,
   _prev: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
+  const sessionUser = await getSessionUser();
   const eventId = parseRecordId(eventIdRaw);
   if (eventId == null) {
     return { ok: false, message: "Invalid event" };
   }
-  const parsed = registrationSchema.safeParse({
-    name: String(formData.get("name") ?? ""),
-    email: String(formData.get("email") ?? ""),
-  });
-  if (!parsed.success) {
-    return {
-      ok: false,
-      fieldErrors: parsed.error.flatten().fieldErrors as Record<
-        string,
-        string[]
-      >,
-    };
+  let name: string;
+  let email: string;
+  if (sessionUser) {
+    name = sessionUser.name.trim();
+    email = sessionUser.email.toLowerCase();
+    if (!name) {
+      return { ok: false, message: "Update your profile name before registering" };
+    }
+  } else {
+    const parsed = registrationSchema.safeParse({
+      name: String(formData.get("name") ?? ""),
+      email: String(formData.get("email") ?? ""),
+    });
+    if (!parsed.success) {
+      return {
+        ok: false,
+        fieldErrors: parsed.error.flatten().fieldErrors as Record<
+          string,
+          string[]
+        >,
+      };
+    }
+    name = parsed.data.name;
+    email = parsed.data.email.toLowerCase();
   }
 
   const event = await db.event.findUnique({
@@ -82,17 +105,27 @@ export async function registerForEvent(
   }
 
   try {
-    await db.registration.create({
-      data: {
-        eventId,
-        name: parsed.data.name,
-        email: parsed.data.email.toLowerCase(),
-        answersJson:
-          Object.keys(answers).length > 0
-            ? (answers as Prisma.InputJsonValue)
-            : undefined,
-      },
-    });
+    const createData = {
+      eventId,
+      name,
+      email,
+      answersJson:
+        Object.keys(answers).length > 0
+          ? (answers as Prisma.InputJsonValue)
+          : undefined,
+    };
+    try {
+      await db.registration.create({ data: createData });
+    } catch (e) {
+      if (!hasUnsupportedJsonError(e)) throw e;
+      await db.registration.create({
+        data: {
+          eventId,
+          name,
+          email,
+        },
+      });
+    }
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return {

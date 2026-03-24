@@ -13,6 +13,9 @@ const initial: ActionState = { ok: false };
 type Props = {
   eventId: string | number;
   closed: boolean;
+  isAuthenticated?: boolean;
+  profileName?: string;
+  profileEmail?: string;
   isRegistered?: boolean;
   eventTitle?: string;
   startsAtIso?: string;
@@ -65,6 +68,9 @@ function toGoogleCalendarUrl(params: {
 export function EventRegisterForm({
   eventId,
   closed,
+  isAuthenticated = false,
+  profileName,
+  profileEmail,
   isRegistered = false,
   eventTitle,
   startsAtIso,
@@ -74,6 +80,7 @@ export function EventRegisterForm({
   questions = [],
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const action = useMemo(
     () => registerForEvent.bind(null, eventId),
     [eventId],
@@ -88,6 +95,34 @@ export function EventRegisterForm({
     location: eventLocation,
   });
   const registeredNow = isRegistered || state.ok;
+
+  const handleShare = async () => {
+    if (!eventUrl) return;
+    const normalizedUrl =
+      eventUrl.startsWith("http://") || eventUrl.startsWith("https://")
+        ? eventUrl
+        : `${window.location.origin}${eventUrl.startsWith("/") ? eventUrl : `/${eventUrl}`}`;
+    const shareData = {
+      title: eventTitle ?? "Luna event",
+      text: `Join me at ${eventTitle ?? "this event"} on Luna`,
+      url: normalizedUrl,
+    };
+    try {
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        await navigator.share(shareData);
+        setShareFeedback(null);
+        return;
+      }
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(normalizedUrl);
+        setShareFeedback("Event link copied");
+        return;
+      }
+      setShareFeedback("Sharing is not supported on this device");
+    } catch {
+      setShareFeedback("Could not share right now");
+    }
+  };
 
   useEffect(() => {
     if (state.ok) {
@@ -130,19 +165,23 @@ export function EventRegisterForm({
             </a>
           ) : null}
           {eventUrl ? (
-            <a
-              href={`mailto:?subject=${encodeURIComponent(eventTitle ?? "Luna event")}&body=${encodeURIComponent(eventUrl)}`}
+            <button
+              type="button"
+              onClick={handleShare}
               className={cn(
                 "border-input bg-background hover:bg-accent inline-flex items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
               )}
             >
               Invite a Friend
-            </a>
+            </button>
           ) : null}
         </div>
         <p className="text-muted-foreground mt-3 text-sm">
           You are already registered for this event.
         </p>
+        {shareFeedback ? (
+          <p className="text-muted-foreground mt-1 text-xs">{shareFeedback}</p>
+        ) : null}
       </div>
     );
   }
@@ -199,35 +238,44 @@ export function EventRegisterForm({
             </div>
 
             <form action={formAction} className="flex flex-col gap-3">
-              <div className="space-y-2">
-                <Label htmlFor={`ev-reg-name-${eventId}`}>Name</Label>
-                <Input
-                  id={`ev-reg-name-${eventId}`}
-                  name="name"
-                  required
-                  maxLength={120}
-                  autoComplete="name"
-                />
-                {state.fieldErrors?.name?.[0] ? (
-                  <p className="text-destructive text-xs">{state.fieldErrors.name[0]}</p>
-                ) : null}
-              </div>
+              {isAuthenticated ? (
+                <div className="bg-muted/50 rounded-xl border px-3 py-2.5 text-sm">
+                  <p className="font-medium">{profileName || "Your account"}</p>
+                  <p className="text-muted-foreground">{profileEmail || "Signed in"}</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor={`ev-reg-name-${eventId}`}>Name</Label>
+                    <Input
+                      id={`ev-reg-name-${eventId}`}
+                      name="name"
+                      required
+                      maxLength={120}
+                      autoComplete="name"
+                    />
+                    {state.fieldErrors?.name?.[0] ? (
+                      <p className="text-destructive text-xs">{state.fieldErrors.name[0]}</p>
+                    ) : null}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor={`ev-reg-email-${eventId}`}>Email</Label>
-                <Input
-                  id={`ev-reg-email-${eventId}`}
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                />
-                {state.fieldErrors?.email?.[0] ? (
-                  <p className="text-destructive text-xs">
-                    {state.fieldErrors.email[0]}
-                  </p>
-                ) : null}
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`ev-reg-email-${eventId}`}>Email</Label>
+                    <Input
+                      id={`ev-reg-email-${eventId}`}
+                      name="email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                    />
+                    {state.fieldErrors?.email?.[0] ? (
+                      <p className="text-destructive text-xs">
+                        {state.fieldErrors.email[0]}
+                      </p>
+                    ) : null}
+                  </div>
+                </>
+              )}
 
               {questions.map((q) => (
                 <div className="space-y-2" key={q.id}>
