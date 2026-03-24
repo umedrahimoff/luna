@@ -19,6 +19,9 @@ import { requireUser } from "@/lib/require-user";
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PROTECTED_ACCOUNT_EMAIL = "thisisumed@gmail.com";
+const PROTECTED_ACCOUNT_EMAIL_NORM = PROTECTED_ACCOUNT_EMAIL
+  .trim()
+  .toLowerCase();
 
 async function removeAvatarFile(avatarUrl: string | null | undefined) {
   if (!avatarUrl?.startsWith("/uploads/avatars/")) return;
@@ -231,7 +234,15 @@ export async function deleteAccount(
   if (!user) {
     return { ok: false, message: "Session invalid" };
   }
-  if ((user.email ?? "").toLowerCase() === PROTECTED_ACCOUNT_EMAIL) {
+  const protectedByEmail =
+    (user.email ?? "").trim().toLowerCase() === PROTECTED_ACCOUNT_EMAIL_NORM;
+  const protectedAccount = await db.user.findFirst({
+    where: { email: PROTECTED_ACCOUNT_EMAIL_NORM },
+    select: { id: true },
+  });
+  const protectedById =
+    protectedAccount != null && protectedAccount.id === user.id;
+  if (protectedByEmail || protectedById) {
     return { ok: false, message: "This account is protected and cannot be deleted." };
   }
   if (user.role === UserRole.ADMIN) {

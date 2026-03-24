@@ -6,6 +6,9 @@ import { requireUser } from "@/lib/require-user";
 import { MePageClient } from "@/components/me/me-page-client";
 
 const PROTECTED_ACCOUNT_EMAIL = "thisisumed@gmail.com";
+const PROTECTED_ACCOUNT_EMAIL_NORM = PROTECTED_ACCOUNT_EMAIL
+  .trim()
+  .toLowerCase();
 
 function MeFallback() {
   return (
@@ -46,15 +49,21 @@ async function MeContent() {
     },
   });
 
+  const protectedAccount = await db.user.findFirst({
+    where: { email: PROTECTED_ACCOUNT_EMAIL_NORM },
+    select: { id: true },
+  });
   const isProtectedEmail =
-    (user.email ?? "").toLowerCase() === PROTECTED_ACCOUNT_EMAIL;
+    (user.email ?? "").trim().toLowerCase() === PROTECTED_ACCOUNT_EMAIL_NORM;
+  const isProtectedId =
+    protectedAccount != null && protectedAccount.id === session.id;
   const adminCount =
     user.role === UserRole.ADMIN
       ? await db.user.count({ where: { role: UserRole.ADMIN } })
       : 0;
   const isLastAdmin = user.role === UserRole.ADMIN && adminCount <= 1;
-  const canDeleteAccount = !isProtectedEmail && !isLastAdmin;
-  const deleteBlockedReason = isProtectedEmail
+  const canDeleteAccount = !isProtectedEmail && !isProtectedId && !isLastAdmin;
+  const deleteBlockedReason = isProtectedEmail || isProtectedId
     ? "This account is protected and cannot be deleted."
     : isLastAdmin
       ? "You cannot delete the last administrator account."
