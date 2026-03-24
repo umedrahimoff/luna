@@ -3,7 +3,12 @@ import { z } from "zod";
 export const updateProfileSchema = z.object({
   firstName: z.string().trim().min(1, "Enter your first name").max(60),
   lastName: z.string().trim().max(60),
-  email: z.string().trim().email("Invalid email").max(320),
+  email: z
+    .string()
+    .trim()
+    .max(320)
+    .transform((s) => (s === "" ? undefined : s))
+    .refine((s) => (s ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) : true), "Invalid email"),
   bio: z
     .string()
     .max(2000, "Bio is too long")

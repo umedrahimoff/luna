@@ -12,7 +12,7 @@ type Props = {
   showAdminLink?: boolean;
   sessionUser?: {
     name: string;
-    email: string;
+    email: string | null;
     username: string | null;
     avatarUrl: string | null;
   } | null;

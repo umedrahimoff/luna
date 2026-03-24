@@ -105,13 +105,11 @@ export async function registerWithTelegram(
     };
   }
 
-  const email = `${row.telegramUserId}@tg.luna`;
   const name = joinDisplayName(parsed.data.firstName, parsed.data.lastName);
   const passwordHash = await bcrypt.hash(randomBytes(32).toString("hex"), 10);
 
   const user = await db.user.create({
     data: {
-      email,
       name,
       loginSlug: slugParsed.data,
       telegramUserId: row.telegramUserId,

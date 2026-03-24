@@ -99,7 +99,7 @@ export default async function AdminEditUserPage({ params, searchParams }: Props)
             type="email"
             required
             autoComplete="email"
-            defaultValue={user.email}
+            defaultValue={user.email ?? ""}
           />
         </div>
         <div className={fieldShell}>

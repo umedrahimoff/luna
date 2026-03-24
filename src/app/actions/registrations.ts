@@ -31,9 +31,12 @@ export async function registerForEvent(
   let email: string;
   if (sessionUser) {
     name = sessionUser.name.trim();
-    email = sessionUser.email.toLowerCase();
+    email = sessionUser.email?.toLowerCase() ?? "";
     if (!name) {
       return { ok: false, message: "Update your profile name before registering" };
+    }
+    if (!email) {
+      return { ok: false, message: "Add your email in profile before registering" };
     }
   } else {
     const parsed = registrationSchema.safeParse({

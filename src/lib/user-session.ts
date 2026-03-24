@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 
 export type SessionUser = {
   id: number;
-  email: string;
+  email: string | null;
   name: string;
   role: UserRole;
   username: string | null;
@@ -22,7 +22,7 @@ async function loadSessionUserRow(userId: number): Promise<SessionUser | null> {
     const rows = await db.$queryRaw<
       Array<{
         id: number;
-        email: string;
+        email: string | null;
         name: string;
         role: string;
         username: string | null;
@@ -45,7 +45,7 @@ async function loadSessionUserRow(userId: number): Promise<SessionUser | null> {
     const rows = await db.$queryRaw<
       Array<{
         id: number;
-        email: string;
+        email: string | null;
         name: string;
         role: string;
       }>

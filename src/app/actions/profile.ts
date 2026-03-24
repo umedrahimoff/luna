@@ -62,16 +62,18 @@ export async function updateProfile(
     };
   }
 
-  const email = parsed.data.email.toLowerCase();
-  const existing = await db.user.findFirst({
-    where: { email, NOT: { id: userId } },
-    select: { id: true },
-  });
-  if (existing) {
-    return {
-      ok: false,
-      fieldErrors: { email: ["This email is already in use"] },
-    };
+  const email = parsed.data.email?.toLowerCase() ?? null;
+  if (email) {
+    const existing = await db.user.findFirst({
+      where: { email, NOT: { id: userId } },
+      select: { id: true },
+    });
+    if (existing) {
+      return {
+        ok: false,
+        fieldErrors: { email: ["This email is already in use"] },
+      };
+    }
   }
 
   const uResult = parsePublicUsername(

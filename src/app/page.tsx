@@ -31,7 +31,7 @@ export default async function HomePage({
         <PublicEventList
           categorySlug={categorySlug}
           listBasePath="/"
-          registeredEmail={user.email}
+          registeredEmail={user.email ?? undefined}
         />
       ) : (
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">

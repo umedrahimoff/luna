@@ -57,14 +57,16 @@ export default async function PublicUserProfilePage({ params }: Props) {
   });
   if (!user) notFound();
 
-  const emailNorm = user.email.toLowerCase();
-  const attendedCount = await db.registration.count({
-    where: { email: emailNorm },
-  });
+  const emailNorm = user.email?.toLowerCase() ?? null;
+  const attendedCount = emailNorm
+    ? await db.registration.count({
+        where: { email: emailNorm },
+      })
+    : 0;
 
   const hostedCount = user.events.length;
   const initials = initialsFromName(user.name);
-  const avatarBg = avatarBackgroundFromEmail(user.email);
+  const avatarBg = avatarBackgroundFromEmail(user.email ?? user.name);
   const joined = user.createdAt.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",

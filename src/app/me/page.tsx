@@ -41,7 +41,7 @@ async function MeContent() {
       user={{
         firstName,
         lastName,
-        email: user.email,
+        email: user.email ?? "",
         bio: user.bio,
         username: user.username,
         avatarUrl: user.avatarUrl,

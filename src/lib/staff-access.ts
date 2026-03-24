@@ -20,7 +20,7 @@ export async function isAdminRoleAccess(): Promise<boolean> {
 
 export type StaffContext = {
   id: number;
-  email: string;
+  email: string | null;
   name: string;
   role: UserRole;
 };

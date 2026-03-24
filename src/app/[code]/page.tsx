@@ -59,13 +59,13 @@ export default async function EventPage({ params }: Props) {
   const full =
     event.capacity != null && registered >= event.capacity;
   const hostInitials = initialsFromName(event.user.name);
-  const hostAvatarBg = avatarBackgroundFromEmail(event.user.email);
+  const hostAvatarBg = avatarBackgroundFromEmail(event.user.email ?? event.user.name);
   const mapQuery = event.location?.trim() ?? "";
   const locationMapUrl = (event as typeof event & { locationMapUrl?: string | null })
     .locationMapUrl;
   const meetingUrl = (event as typeof event & { meetingUrl?: string | null }).meetingUrl;
   let userRegisteredForEvent = false;
-  if (user) {
+  if (user?.email) {
     const reg = await db.registration.findFirst({
       where: { eventId: event.id, email: user.email.toLowerCase() },
       select: { id: true },
@@ -209,7 +209,7 @@ export default async function EventPage({ params }: Props) {
             closed={full}
             isAuthenticated={!!user}
             profileName={user?.name}
-            profileEmail={user?.email}
+            profileEmail={user?.email ?? undefined}
             isRegistered={userRegisteredForEvent}
             eventTitle={event.title}
             startsAtIso={event.startsAt.toISOString()}

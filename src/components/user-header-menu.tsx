@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 export type HeaderUser = {
   name: string;
-  email: string;
+  email: string | null;
   username: string | null;
   avatarUrl: string | null;
 };
@@ -23,7 +23,7 @@ function UserAvatar({
   textClass: string;
 }) {
   const initials = initialsFromName(user.name);
-  const bg = avatarBackgroundFromEmail(user.email);
+  const bg = avatarBackgroundFromEmail(user.email ?? user.name);
   if (user.avatarUrl) {
     return (
       <span
@@ -55,9 +55,13 @@ function UserAvatar({
   );
 }
 
-function handleFromEmail(email: string): string {
-  const local = email.split("@")[0]?.trim() || "user";
-  return `@${local}`;
+function userHandle(user: HeaderUser): string {
+  if (user.username?.trim()) return `@${user.username.trim()}`;
+  if (user.email?.trim()) {
+    const local = user.email.split("@")[0]?.trim() || "user";
+    return `@${local}`;
+  }
+  return "@no_handle";
 }
 
 const menuItemClass =
@@ -99,7 +103,7 @@ export function UserHeaderMenu({ user, showAdminLink }: Props) {
         aria-haspopup="menu"
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((v) => !v)}
-        title={user.email}
+        title={user.email ?? user.name}
       >
         <UserAvatar
           user={user}
@@ -125,7 +129,7 @@ export function UserHeaderMenu({ user, showAdminLink }: Props) {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{user.name}</p>
                 <p className="text-muted-foreground truncate text-xs">
-                  {handleFromEmail(user.email)}
+                  {userHandle(user)}
                 </p>
               </div>
             </div>
