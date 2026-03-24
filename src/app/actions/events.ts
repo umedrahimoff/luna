@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { EventFormat, Prisma } from "@prisma/client";
+import { EventFormat, Prisma, RegistrationMode } from "@prisma/client";
 import { db } from "@/lib/db";
 import { isStaffAccess } from "@/lib/staff-access";
 import { getSessionUser } from "@/lib/user-session";
@@ -32,6 +32,12 @@ function formDataToObject(formData: FormData) {
     startsAt: String(formData.get("startsAt") ?? ""),
     endsAt: String(formData.get("endsAt") ?? ""),
     format: String(formData.get("format") ?? "") as EventFormat,
+    registrationMode:
+      String(formData.get("registrationMode") ?? "") as RegistrationMode,
+    externalRegistrationUrl:
+      String(formData.get("externalRegistrationUrl") ?? "") || undefined,
+    externalSourceLabel:
+      String(formData.get("externalSourceLabel") ?? "") || undefined,
     location: String(formData.get("location") ?? "") || undefined,
     locationMapUrl: String(formData.get("locationMapUrl") ?? "") || undefined,
     meetingUrl: String(formData.get("meetingUrl") ?? "") || undefined,
@@ -142,6 +148,15 @@ export async function createEvent(
     meetingUrl:
       parsed.data.format === EventFormat.ONLINE
         ? parsed.data.meetingUrl?.trim() || null
+        : null,
+    registrationMode: parsed.data.registrationMode,
+    externalRegistrationUrl:
+      parsed.data.registrationMode === RegistrationMode.EXTERNAL
+        ? parsed.data.externalRegistrationUrl?.trim() || null
+        : null,
+    externalSourceLabel:
+      parsed.data.registrationMode === RegistrationMode.EXTERNAL
+        ? parsed.data.externalSourceLabel?.trim() || null
         : null,
     capacity: capacityFromForm(parsed.data.capacity),
     coverImageUrl: null as string | null,
@@ -279,6 +294,15 @@ export async function updateEvent(
       meetingUrl:
         parsed.data.format === EventFormat.ONLINE
           ? parsed.data.meetingUrl?.trim() || null
+          : null,
+      registrationMode: parsed.data.registrationMode,
+      externalRegistrationUrl:
+        parsed.data.registrationMode === RegistrationMode.EXTERNAL
+          ? parsed.data.externalRegistrationUrl?.trim() || null
+          : null,
+      externalSourceLabel:
+        parsed.data.registrationMode === RegistrationMode.EXTERNAL
+          ? parsed.data.externalSourceLabel?.trim() || null
           : null,
       capacity: capacityFromForm(parsed.data.capacity),
       coverImageUrl: nextCoverImageUrl,

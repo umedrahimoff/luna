@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EventFormat } from "@prisma/client";
+import { EventFormat, RegistrationMode } from "@prisma/client";
 
 export const eventFormSchema = z
   .object({
@@ -8,6 +8,11 @@ export const eventFormSchema = z
     startsAt: z.string().min(1, "Enter start date and time"),
     endsAt: z.string().min(1, "Enter end date and time"),
     format: z.nativeEnum(EventFormat),
+    registrationMode: z.nativeEnum(RegistrationMode).default(
+      RegistrationMode.INTERNAL,
+    ),
+    externalRegistrationUrl: z.string().optional(),
+    externalSourceLabel: z.string().trim().max(80).optional(),
     location: z.string().trim().max(500).optional(),
     locationMapUrl: z.string().optional(),
     meetingUrl: z.string().optional(),
@@ -55,6 +60,27 @@ export const eventFormSchema = z
             code: z.ZodIssueCode.custom,
             message: "Meeting link must start with http:// or https://",
             path: ["meetingUrl"],
+          });
+        }
+      }
+    }
+    if (data.registrationMode === RegistrationMode.EXTERNAL) {
+      const extUrl = data.externalRegistrationUrl?.trim();
+      if (!extUrl) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter external registration URL",
+          path: ["externalRegistrationUrl"],
+        });
+      } else {
+        try {
+          const u = new URL(extUrl);
+          if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error();
+        } catch {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "External URL must start with http:// or https://",
+            path: ["externalRegistrationUrl"],
           });
         }
       }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { Event } from "@prisma/client";
+import { RegistrationMode, type Event } from "@prisma/client";
 import { AdminEventAttendeesSection } from "@/components/admin-event-attendees-section";
 import { AdminEventEditPanels } from "@/components/admin-event-edit-panels";
 import { AdminEventRegistrationQuestionsSection } from "@/components/admin-event-registration-questions-section";
@@ -144,16 +144,23 @@ export default async function AdminEditEventPage({
             <h3 id="tab-attendees" className="sr-only">
               Participants
             </h3>
-            <AdminEventAttendeesSection
-              action={editBase}
-              defaultQuery={q}
-              resetHref={`${editWithListQuery}#attendees`}
-              showReset={hasFilters}
-              filters={sortFilter}
-              registrations={event.registrations}
-              totalRegs={totalRegs}
-              searchQuery={q}
-            />
+            {(event as Event & { registrationMode?: RegistrationMode }).registrationMode ===
+            RegistrationMode.EXTERNAL ? (
+              <p className="text-muted-foreground text-sm">
+                Registrations are handled externally for this event.
+              </p>
+            ) : (
+              <AdminEventAttendeesSection
+                action={editBase}
+                defaultQuery={q}
+                resetHref={`${editWithListQuery}#attendees`}
+                showReset={hasFilters}
+                filters={sortFilter}
+                registrations={event.registrations}
+                totalRegs={totalRegs}
+                searchQuery={q}
+              />
+            )}
           </>
         }
         questions={

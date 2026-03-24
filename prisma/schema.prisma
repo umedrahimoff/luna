@@ -12,6 +12,11 @@ enum EventFormat {
   OFFLINE
 }
 
+enum RegistrationMode {
+  INTERNAL
+  EXTERNAL
+}
+
 enum UserRole {
   USER
   MODERATOR
@@ -108,6 +113,9 @@ model Event {
   location      String?
   locationMapUrl String?
   meetingUrl    String?
+  registrationMode       RegistrationMode @default(INTERNAL)
+  externalRegistrationUrl String?
+  externalSourceLabel     String?
   capacity      Int?
   coverImageUrl String?
   userId        Int

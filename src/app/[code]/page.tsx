@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EventFormat } from "@prisma/client";
+import { EventFormat, RegistrationMode } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { EventCoverImage } from "@/components/event-cover-image";
@@ -64,6 +64,15 @@ export default async function EventPage({ params }: Props) {
   const locationMapUrl = (event as typeof event & { locationMapUrl?: string | null })
     .locationMapUrl;
   const meetingUrl = (event as typeof event & { meetingUrl?: string | null }).meetingUrl;
+  const registrationMode = (
+    event as typeof event & { registrationMode?: RegistrationMode }
+  ).registrationMode ?? RegistrationMode.INTERNAL;
+  const externalRegistrationUrl = (
+    event as typeof event & { externalRegistrationUrl?: string | null }
+  ).externalRegistrationUrl;
+  const externalSourceLabel = (
+    event as typeof event & { externalSourceLabel?: string | null }
+  ).externalSourceLabel;
   let userRegisteredForEvent = false;
   if (user?.email) {
     const reg = await db.registration.findFirst({
@@ -151,6 +160,9 @@ export default async function EventPage({ params }: Props) {
             <Badge variant="outline">{event.category.name}</Badge>
           ) : null}
           <Badge variant="secondary">{formatLabel(event.format)}</Badge>
+          {registrationMode === RegistrationMode.EXTERNAL ? (
+            <Badge variant="outline">External registration</Badge>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -200,24 +212,45 @@ export default async function EventPage({ params }: Props) {
 
         <section className="border-border border-t pt-4">
           <h2 className="text-base font-semibold tracking-tight">Registration</h2>
-          <p className="text-muted-foreground mt-1 mb-4 max-w-xl text-sm leading-relaxed">
-            Submit a join request via the registration block below. The form opens
-            in a modal with required fields.
-          </p>
-          <EventRegisterForm
-            eventId={event.id}
-            closed={full}
-            isAuthenticated={!!user}
-            profileName={user?.name}
-            profileEmail={user?.email ?? undefined}
-            isRegistered={userRegisteredForEvent}
-            eventTitle={event.title}
-            startsAtIso={event.startsAt.toISOString()}
-            endsAtIso={event.endsAt.toISOString()}
-            eventLocation={event.location}
-            eventUrl={`/${event.publicCode}`}
-            questions={event.registrationQuestions}
-          />
+          {registrationMode === RegistrationMode.EXTERNAL ? (
+            <>
+              <p className="text-muted-foreground mt-1 mb-4 max-w-xl text-sm leading-relaxed">
+                Registration is handled on the organizer&apos;s side.
+                {externalSourceLabel ? ` Source: ${externalSourceLabel}.` : ""}
+              </p>
+              <div className="border-border bg-card rounded-2xl border p-4 sm:p-5">
+                <a
+                  href={externalRegistrationUrl ?? "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(buttonVariants({ size: "sm" }), "w-full sm:w-auto")}
+                >
+                  Register on external site
+                </a>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground mt-1 mb-4 max-w-xl text-sm leading-relaxed">
+                Submit a join request via the registration block below. The form opens
+                in a modal with required fields.
+              </p>
+              <EventRegisterForm
+                eventId={event.id}
+                closed={full}
+                isAuthenticated={!!user}
+                profileName={user?.name}
+                profileEmail={user?.email ?? undefined}
+                isRegistered={userRegisteredForEvent}
+                eventTitle={event.title}
+                startsAtIso={event.startsAt.toISOString()}
+                endsAtIso={event.endsAt.toISOString()}
+                eventLocation={event.location}
+                eventUrl={`/${event.publicCode}`}
+                questions={event.registrationQuestions}
+              />
+            </>
+          )}
         </section>
 
         <section className="flex flex-col gap-2">

@@ -59,6 +59,7 @@ type Props = {
     username: string | null;
     avatarUrl: string | null;
   };
+  canDeleteAccount?: boolean;
   events: EventListItem[];
 };
 
@@ -73,7 +74,7 @@ function fieldErr(
   return fe?.[key]?.[0];
 }
 
-export function MePageClient({ user, events }: Props) {
+export function MePageClient({ user, canDeleteAccount = true, events }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
   const tabParam = sp.get("tab");
@@ -620,6 +621,7 @@ export function MePageClient({ user, events }: Props) {
                     name="password"
                     type="password"
                     autoComplete="current-password"
+                    disabled={!canDeleteAccount}
                     aria-invalid={
                       !!fieldErr(deleteState.fieldErrors, "password")
                     }
@@ -630,7 +632,9 @@ export function MePageClient({ user, events }: Props) {
                     </p>
                   ) : (
                     <p className="text-muted-foreground text-xs">
-                      Enter your password to confirm you own this account.
+                      {canDeleteAccount
+                        ? "Enter your password to confirm you own this account."
+                        : "This account is protected and cannot be deleted."}
                     </p>
                   )}
                 </div>
@@ -641,7 +645,7 @@ export function MePageClient({ user, events }: Props) {
                 type="button"
                 variant="destructive"
                 className="gap-2"
-                disabled={deletePending}
+                disabled={deletePending || !canDeleteAccount}
                 onClick={() => setConfirmDelete(true)}
               >
                 Delete my account
@@ -678,7 +682,7 @@ export function MePageClient({ user, events }: Props) {
       />
 
       <ConfirmDialog
-        open={confirmDelete}
+        open={canDeleteAccount ? confirmDelete : false}
         onOpenChange={setConfirmDelete}
         variant="destructive"
         title="Delete your account?"

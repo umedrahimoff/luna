@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { Event } from "@prisma/client";
+import { RegistrationMode, type Event } from "@prisma/client";
 import { AdminEventEditPanels } from "@/components/admin-event-edit-panels";
 import { AdminEventRegistrationQuestionsSection } from "@/components/admin-event-registration-questions-section";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -81,36 +81,47 @@ export default async function EditEventPage({ params }: Props) {
               Participants
             </h3>
             <div className="flex flex-col gap-3">
-              <p className="text-muted-foreground text-sm">
-                People who registered for this event ({event.registrations.length} total).
-              </p>
-              <div className="overflow-x-auto rounded-lg border">
-                <table className="w-full min-w-[480px] text-left text-sm">
-                  <thead className="bg-muted/50 border-b">
-                    <tr>
-                      <th className="p-2.5 font-medium">Name</th>
-                      <th className="p-2.5 font-medium">Email</th>
-                      <th className="p-2.5 font-medium">Registered</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {event.registrations.map((r) => (
-                      <tr key={r.id} className="border-b last:border-0">
-                        <td className="p-2.5">{r.name}</td>
-                        <td className="text-muted-foreground p-2.5">{r.email}</td>
-                        <td className="text-muted-foreground p-2.5 tabular-nums">
-                          {r.createdAt.toLocaleString("en-US", {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {event.registrations.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No participants yet.</p>
+              {(event as Event & { registrationMode?: RegistrationMode }).registrationMode ===
+              RegistrationMode.EXTERNAL ? (
+                <p className="text-muted-foreground text-sm">
+                  Registrations are handled externally for this event.
+                </p>
+              ) : null}
+              {(event as Event & { registrationMode?: RegistrationMode }).registrationMode !==
+              RegistrationMode.EXTERNAL ? (
+                <>
+                  <p className="text-muted-foreground text-sm">
+                    People who registered for this event ({event.registrations.length} total).
+                  </p>
+                  <div className="overflow-x-auto rounded-lg border">
+                    <table className="w-full min-w-[480px] text-left text-sm">
+                      <thead className="bg-muted/50 border-b">
+                        <tr>
+                          <th className="p-2.5 font-medium">Name</th>
+                          <th className="p-2.5 font-medium">Email</th>
+                          <th className="p-2.5 font-medium">Registered</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {event.registrations.map((r) => (
+                          <tr key={r.id} className="border-b last:border-0">
+                            <td className="p-2.5">{r.name}</td>
+                            <td className="text-muted-foreground p-2.5">{r.email}</td>
+                            <td className="text-muted-foreground p-2.5 tabular-nums">
+                              {r.createdAt.toLocaleString("en-US", {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {event.registrations.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No participants yet.</p>
+                  ) : null}
+                </>
               ) : null}
             </div>
           </>

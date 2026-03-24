@@ -4,6 +4,8 @@ import { splitDisplayName } from "@/lib/display-name";
 import { requireUser } from "@/lib/require-user";
 import { MePageClient } from "@/components/me/me-page-client";
 
+const PROTECTED_ACCOUNT_EMAIL = "thisisumed@gmail.com";
+
 function MeFallback() {
   return (
     <div className="flex flex-col gap-4 animate-pulse">
@@ -46,6 +48,7 @@ async function MeContent() {
         username: user.username,
         avatarUrl: user.avatarUrl,
       }}
+      canDeleteAccount={(user.email ?? "").toLowerCase() !== PROTECTED_ACCOUNT_EMAIL}
       events={events}
     />
   );

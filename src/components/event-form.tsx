@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { EventFormat } from "@prisma/client";
+import { EventFormat, RegistrationMode } from "@prisma/client";
 import type { Event } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,6 +74,15 @@ export function EventForm(props: Props) {
   const [format, setFormat] = useState<EventFormat>(
     props.mode === "edit" ? props.event.format : EventFormat.ONLINE,
   );
+  const [registrationMode, setRegistrationMode] = useState<RegistrationMode>(
+    props.mode === "edit"
+      ? (
+          props.event as Event & {
+            registrationMode?: RegistrationMode;
+          }
+        ).registrationMode ?? RegistrationMode.INTERNAL
+      : RegistrationMode.INTERNAL,
+  );
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const editEvent = props.mode === "edit" ? (props.event as Event & { locationMapUrl?: string | null; meetingUrl?: string | null }) : null;
 
@@ -88,6 +97,14 @@ export function EventForm(props: Props) {
       setFormat(values.format);
     }
   }, [values?.format]);
+  useEffect(() => {
+    if (
+      values?.registrationMode === RegistrationMode.INTERNAL ||
+      values?.registrationMode === RegistrationMode.EXTERNAL
+    ) {
+      setRegistrationMode(values.registrationMode);
+    }
+  }, [values?.registrationMode]);
 
   if (props.categories.length === 0) {
     return (
@@ -285,6 +302,80 @@ export function EventForm(props: Props) {
             </p>
           ) : null}
         </div>
+
+        <div className={fieldShell}>
+          <Label htmlFor="registrationMode">Registration</Label>
+          <select
+            id="registrationMode"
+            name="registrationMode"
+            required
+            value={registrationMode}
+            onChange={(e) =>
+              setRegistrationMode(e.target.value as RegistrationMode)
+            }
+            className={cn(
+              "border-input bg-background min-h-10 w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none",
+              "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
+            )}
+          >
+            <option value={RegistrationMode.INTERNAL}>On Luna</option>
+            <option value={RegistrationMode.EXTERNAL}>External link</option>
+          </select>
+        </div>
+
+        {registrationMode === RegistrationMode.EXTERNAL ? (
+          <div className={cn(fieldShell, "sm:col-span-2")}>
+            <Label htmlFor="externalRegistrationUrl">External registration URL</Label>
+            <Input
+              id="externalRegistrationUrl"
+              name="externalRegistrationUrl"
+              type="url"
+              inputMode="url"
+              placeholder="https://..."
+              defaultValue={
+                values?.externalRegistrationUrl ??
+                (props.mode === "edit"
+                  ? (
+                      props.event as Event & {
+                        externalRegistrationUrl?: string | null;
+                      }
+                    ).externalRegistrationUrl ?? ""
+                  : "")
+              }
+              aria-invalid={!!fieldError(state.fieldErrors, "externalRegistrationUrl")}
+            />
+            {fieldError(state.fieldErrors, "externalRegistrationUrl") ? (
+              <p className="text-destructive text-sm">
+                {fieldError(state.fieldErrors, "externalRegistrationUrl")}
+              </p>
+            ) : null}
+            <div className="mt-1">
+              <Label htmlFor="externalSourceLabel">Source label (optional)</Label>
+              <Input
+                id="externalSourceLabel"
+                name="externalSourceLabel"
+                maxLength={80}
+                placeholder="Timepad, Luma, Eventbrite..."
+                defaultValue={
+                  values?.externalSourceLabel ??
+                  (props.mode === "edit"
+                    ? (
+                        props.event as Event & {
+                          externalSourceLabel?: string | null;
+                        }
+                      ).externalSourceLabel ?? ""
+                    : "")
+                }
+                aria-invalid={!!fieldError(state.fieldErrors, "externalSourceLabel")}
+              />
+              {fieldError(state.fieldErrors, "externalSourceLabel") ? (
+                <p className="text-destructive text-sm">
+                  {fieldError(state.fieldErrors, "externalSourceLabel")}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {format === EventFormat.OFFLINE ? (
           <>
