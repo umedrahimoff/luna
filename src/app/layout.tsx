@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { MainShell } from "@/components/main-shell";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { ThemeProvider } from "@/components/theme-provider";
 import { isStaffAccess } from "@/lib/staff-access";
 import { getSessionUser } from "@/lib/user-session";
 import "./globals.css";
@@ -37,22 +39,29 @@ export default async function RootLayout({
   ]);
 
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${inter.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="font-sans flex min-h-dvh flex-col">
-        <SiteHeader
-          showAdminLink={staff}
-          sessionUser={
-            sessionUser
-              ? {
-                  name: sessionUser.name,
-                  email: sessionUser.email,
-                  username: sessionUser.username,
-                  avatarUrl: sessionUser.avatarUrl,
-                }
-              : null
-          }
-        />
-        <MainShell>{children}</MainShell>
+        <ThemeProvider>
+          <SiteHeader
+            showAdminLink={staff}
+            sessionUser={
+              sessionUser
+                ? {
+                    name: sessionUser.name,
+                    email: sessionUser.email,
+                    username: sessionUser.username,
+                    avatarUrl: sessionUser.avatarUrl,
+                  }
+                : null
+            }
+          />
+          <MainShell>{children}</MainShell>
+          <SiteFooter />
+        </ThemeProvider>
       </body>
     </html>
   );

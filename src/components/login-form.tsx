@@ -30,6 +30,7 @@ export function LoginForm({ nextPath }: Props) {
           type="email"
           required
           autoComplete="email"
+          placeholder="you@example.com"
         />
       </div>
       <div className="w-full space-y-2">

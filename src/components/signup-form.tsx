@@ -23,9 +23,26 @@ export function SignupForm() {
       }}
       className="flex w-full min-w-0 flex-col gap-3"
     >
-      <div className="w-full space-y-2">
-        <Label htmlFor="reg-name">Name</Label>
-        <Input id="reg-name" name="name" required maxLength={120} autoComplete="name" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="reg-fn">First name</Label>
+          <Input
+            id="reg-fn"
+            name="firstName"
+            required
+            maxLength={60}
+            autoComplete="given-name"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="reg-ln">Last name</Label>
+          <Input
+            id="reg-ln"
+            name="lastName"
+            maxLength={60}
+            autoComplete="family-name"
+          />
+        </div>
       </div>
       <div className="w-full space-y-2">
         <Label htmlFor="reg-email">Email</Label>
@@ -47,7 +64,7 @@ export function SignupForm() {
           minLength={8}
           autoComplete="new-password"
         />
-        <p className="text-muted-foreground text-xs">At least 8 characters</p>
+        <p className="text-muted-foreground text-xs">Minimum 8 characters</p>
       </div>
       {state.message && (
         <p className="text-destructive text-sm">{state.message}</p>

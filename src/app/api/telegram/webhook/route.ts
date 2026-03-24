@@ -1,88 +1,77 @@
+import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-import { TelegramAuthKind } from "@prisma/client";
 import { db } from "@/lib/db";
-import {
-  generateTelegramOneTimeCode,
-  getTelegramBotToken,
-} from "@/lib/telegram";
+import { sendTelegramMessage, telegramBotConfigured } from "@/lib/telegram-api";
 
-export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-export async function GET() {
-  return NextResponse.json({ ok: true });
-}
-
-export async function POST(request: Request) {
-  const secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
-  const expected = process.env.LUNA_TELEGRAM_WEBHOOK_SECRET?.trim();
-  if (expected && secret !== expected) {
-    return NextResponse.json({ ok: false }, { status: 403 });
-  }
-
-  if (!getTelegramBotToken()) {
-    return NextResponse.json({ ok: false }, { status: 503 });
+/**
+ * Telegram Bot API webhook. Set with:
+ * `https://api.telegram.org/bot<TOKEN>/setWebhook?url=<HTTPS_URL>/api/telegram/webhook`
+ * Optional header: `secret_token` -> validated against TELEGRAM_WEBHOOK_SECRET.
+ */
+export async function POST(req: Request) {
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+  if (secret) {
+    const token = req.headers.get("x-telegram-bot-api-secret-token");
+    if (token !== secret) {
+      return NextResponse.json({ ok: false }, { status: 403 });
+    }
   }
 
   let body: unknown;
   try {
-    body = await request.json();
+    body = await req.json();
   } catch {
     return NextResponse.json({ ok: true });
   }
 
-  const msg = (
-    body as {
-      message?: {
-        text?: string;
-        chat?: { id?: number };
-        from?: { id?: number };
-      };
-    }
-  ).message;
-  if (!msg?.text?.trim().toLowerCase().startsWith("/start")) {
+  const msg = (body as { message?: { chat?: { id?: number }; text?: string } })
+    .message;
+  if (!msg || typeof msg.chat?.id !== "number") {
     return NextResponse.json({ ok: true });
   }
 
-  const chatId = msg.chat?.id;
-  const fromId = msg.from?.id;
-  if (chatId == null || fromId == null) {
+  const text = String(msg.text ?? "").trim();
+  if (!text.startsWith("/start")) {
     return NextResponse.json({ ok: true });
   }
 
-  const telegramUserId = BigInt(fromId);
+  const chatId = String(msg.chat.id);
+
+  if (!telegramBotConfigured()) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const code = randomBytes(4).toString("hex").toUpperCase();
 
   await db.telegramAuthCode.deleteMany({
     where: {
-      telegramUserId,
-      kind: TelegramAuthKind.REGISTER,
+      telegramUserId: chatId,
+      purpose: "signup",
       usedAt: null,
     },
   });
 
-  const code = generateTelegramOneTimeCode();
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
   await db.telegramAuthCode.create({
     data: {
       code,
-      kind: TelegramAuthKind.REGISTER,
-      telegramUserId,
-      expiresAt,
+      telegramUserId: chatId,
+      purpose: "signup",
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     },
   });
 
-  const token = getTelegramBotToken()!;
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text:
-        `Ваш код для регистрации Luna:\n\n<code>${code}</code>\n\n` +
-        `Введите его на сайте вместе с логином, именем и фамилией. Срок действия 15 минут.`,
-      parse_mode: "HTML",
-    }),
-  });
+  await sendTelegramMessage(
+    chatId,
+    [
+      "Hi! Your Luna sign-up code:",
+      "",
+      code,
+      "",
+      "Enter it on the website in 'Sign up with Telegram'. The code is valid for 10 minutes.",
+    ].join("\n"),
+  );
 
   return NextResponse.json({ ok: true });
 }

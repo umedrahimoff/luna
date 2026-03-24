@@ -1,6 +1,6 @@
 import { statSync } from "fs";
 import path from "path";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -45,11 +45,6 @@ function assertClientComplete(client: PrismaClient): void {
   ) {
     throw new Error(
       "Prisma Client is out of date. Run: npx prisma generate && restart the dev server.",
-    );
-  }
-  if (!("avatarUrl" in Prisma.UserScalarFieldEnum)) {
-    throw new Error(
-      "Prisma Client не совпадает со schema (нет User.avatarUrl). Выполни: npx prisma migrate deploy && npx prisma generate и перезапусти dev-сервер.",
     );
   }
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import type { Event } from "@prisma/client";
-import { UserRoundPen } from "lucide-react";
+import { CheckCircle2, UserRoundPen } from "lucide-react";
 import {
   changePassword,
   deleteAccount,
@@ -27,11 +27,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ProfileAvatarEditor } from "@/components/me/profile-avatar-editor";
+import { useTheme } from "@/components/theme-provider";
 import { joinDisplayName } from "@/lib/display-name";
 import { avatarBackgroundFromEmail, initialsFromName } from "@/lib/avatar-style";
 import { cn } from "@/lib/utils";
 
-type Tab = "events" | "account";
+type Tab = "events" | "account" | "settings";
 
 type EventListItem = Pick<
   Event,
@@ -76,13 +77,19 @@ export function MePageClient({ user, events }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
   const tabParam = sp.get("tab");
-  /** Default: Account; `?tab=events` opens the events list. */
-  const tab: Tab = tabParam === "events" ? "events" : "account";
+  /** Default: Account; supports `?tab=events` and `?tab=settings`. */
+  const tab: Tab =
+    tabParam === "events"
+      ? "events"
+      : tabParam === "settings"
+        ? "settings"
+        : "account";
 
   const setTab = (next: Tab) => {
     const q = new URLSearchParams(sp.toString());
     if (next === "account") q.delete("tab");
-    else q.set("tab", "events");
+    else if (next === "events") q.set("tab", "events");
+    else q.set("tab", "settings");
     const s = q.toString();
     router.replace(s ? `/me?${s}` : "/me", { scroll: false });
   };
@@ -116,6 +123,9 @@ export function MePageClient({ user, events }: Props) {
   const [confirmProfile, setConfirmProfile] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [language, setLanguage] = useState("en");
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (profileState.ok) {
@@ -126,6 +136,9 @@ export function MePageClient({ user, events }: Props) {
   useEffect(() => {
     if (passwordState.ok) setConfirmPassword(false);
   }, [passwordState.ok]);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const profileKey = useMemo(
     () =>
@@ -141,7 +154,7 @@ export function MePageClient({ user, events }: Props) {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-foreground text-xl font-semibold tracking-tight">
           Profile
@@ -190,10 +203,27 @@ export function MePageClient({ user, events }: Props) {
             <span className="bg-primary absolute inset-x-1 -bottom-px h-0.5 rounded-full" />
           ) : null}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "settings"}
+          className={cn(
+            "relative -mb-px px-3 py-2.5 text-sm font-medium transition-colors",
+            tab === "settings"
+              ? "text-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+          onClick={() => setTab("settings")}
+        >
+          Settings
+          {tab === "settings" ? (
+            <span className="bg-primary absolute inset-x-1 -bottom-px h-0.5 rounded-full" />
+          ) : null}
+        </button>
       </div>
 
       {tab === "events" ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <p className="text-muted-foreground text-sm">
               Events you host (newest first in the list below).
@@ -238,10 +268,71 @@ export function MePageClient({ user, events }: Props) {
             </ul>
           )}
         </div>
+      ) : tab === "settings" ? (
+        <Card>
+          <CardHeader className="border-border border-b p-4 sm:p-5">
+            <CardTitle>Display</CardTitle>
+            <CardDescription>
+              Choose your desired Luna interface.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 p-4 pt-4 sm:p-5">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+              {([
+                { key: "system", label: "System" },
+                { key: "light", label: "Light" },
+                { key: "dark", label: "Dark" },
+              ] as const).map((opt) => (
+                <div key={opt.key} className="relative">
+                  {mounted && theme === opt.key ? (
+                    <span className="bg-foreground text-background absolute right-2 bottom-2 z-10 inline-flex size-5 items-center justify-center rounded-full">
+                      <CheckCircle2 className="size-3.5" aria-hidden />
+                    </span>
+                  ) : null}
+                <button
+                  type="button"
+                  onClick={() => setTheme(opt.key)}
+                  className={cn(
+                    "border-border bg-card hover:bg-accent/40 w-full rounded-xl border p-2.5 text-left transition-colors",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "mb-2 h-12 rounded-md border",
+                      opt.key === "dark"
+                        ? "border-neutral-800 bg-neutral-900"
+                        : opt.key === "light"
+                          ? "border-neutral-200 bg-neutral-100"
+                          : "border-neutral-300 bg-gradient-to-r from-neutral-100 to-neutral-900",
+                    )}
+                  />
+                  <p className="text-sm font-medium">{opt.label}</p>
+                </button>
+                </div>
+              ))}
+            </div>
+            <div className="max-w-xs space-y-2">
+              <Label htmlFor="settings-language">Language</Label>
+              <select
+                id="settings-language"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                disabled
+                className={cn(
+                  "border-input bg-background min-h-10 w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none disabled:cursor-not-allowed disabled:opacity-60",
+                  "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
+                )}
+              >
+                <option value="en">English</option>
+              </select>
+              <p className="text-muted-foreground text-xs">More languages soon.</p>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <Card>
-            <CardHeader className="border-border border-b">
+            <CardHeader className="border-border border-b p-4 sm:p-5">
               <CardTitle>Your profile</CardTitle>
               <CardDescription>
                 Choose how you are displayed as a host or guest. Add a username
@@ -252,9 +343,9 @@ export function MePageClient({ user, events }: Props) {
                 .
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-5">
+            <CardContent className="p-4 pt-4 sm:p-5">
               {user.username ? (
-                <p className="text-muted-foreground mb-5 text-sm">
+                <p className="text-muted-foreground mb-3 text-sm">
                   <Link
                     href={`/u/${user.username}`}
                     className="text-primary font-medium underline underline-offset-4"
@@ -267,10 +358,10 @@ export function MePageClient({ user, events }: Props) {
                 key={profileKey}
                 ref={profileFormRef}
                 action={profileAction}
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-4"
               >
-                <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-8">
-                  <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-6">
+                  <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="profile-first-name">First name</Label>
                       <Input
@@ -310,6 +401,59 @@ export function MePageClient({ user, events }: Props) {
                         </p>
                       ) : null}
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-username">Username</Label>
+                      <div className="flex min-w-0 rounded-lg border border-input shadow-xs focus-within:ring-[3px] focus-within:ring-ring/50">
+                        <span className="text-muted-foreground border-input bg-muted/50 flex shrink-0 items-center border-r px-3 text-sm">
+                          @
+                        </span>
+                        <Input
+                          id="profile-username"
+                          name="username"
+                          autoComplete="username"
+                          placeholder="your_handle"
+                          defaultValue={user.username ?? ""}
+                          className="border-0 shadow-none focus-visible:ring-0 md:text-sm"
+                          aria-invalid={!!fieldErr(
+                            profileState.fieldErrors,
+                            "username",
+                          )}
+                        />
+                      </div>
+                      {fieldErr(profileState.fieldErrors, "username") ? (
+                        <p className="text-destructive text-xs">
+                          {fieldErr(profileState.fieldErrors, "username")}
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          3–30 chars: lowercase letters, numbers, underscores.
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-email">Email</Label>
+                      <Input
+                        id="profile-email"
+                        name="email"
+                        type="email"
+                        required
+                        autoComplete="email"
+                        defaultValue={user.email}
+                        aria-invalid={!!fieldErr(
+                          profileState.fieldErrors,
+                          "email",
+                        )}
+                      />
+                      {fieldErr(profileState.fieldErrors, "email") ? (
+                        <p className="text-destructive text-xs">
+                          {fieldErr(profileState.fieldErrors, "email")}
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          Used for sign-in and event notifications.
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <ProfileAvatarEditor
                     avatarUrl={user.avatarUrl}
@@ -318,79 +462,23 @@ export function MePageClient({ user, events }: Props) {
                   />
                 </div>
 
-                <div className="flex flex-col gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="profile-username">Username</Label>
-                    <div className="flex min-w-0 rounded-lg border border-input shadow-xs focus-within:ring-[3px] focus-within:ring-ring/50">
-                      <span className="text-muted-foreground border-input bg-muted/50 flex shrink-0 items-center border-r px-3 text-sm">
-                        @
-                      </span>
-                      <Input
-                        id="profile-username"
-                        name="username"
-                        autoComplete="username"
-                        placeholder="your_handle"
-                        defaultValue={user.username ?? ""}
-                        className="border-0 shadow-none focus-visible:ring-0 md:text-sm"
-                        aria-invalid={!!fieldErr(
-                          profileState.fieldErrors,
-                          "username",
-                        )}
-                      />
-                    </div>
-                    {fieldErr(profileState.fieldErrors, "username") ? (
-                      <p className="text-destructive text-xs">
-                        {fieldErr(profileState.fieldErrors, "username")}
-                      </p>
-                    ) : (
-                      <p className="text-muted-foreground text-xs">
-                        3–30 characters: lowercase letters, numbers,
-                        underscores. Leave empty to hide your public page.
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="profile-email">Email</Label>
-                    <Input
-                      id="profile-email"
-                      name="email"
-                      type="email"
-                      required
-                      autoComplete="email"
-                      defaultValue={user.email}
-                      aria-invalid={!!fieldErr(
-                        profileState.fieldErrors,
-                        "email",
-                      )}
-                    />
-                    {fieldErr(profileState.fieldErrors, "email") ? (
-                      <p className="text-destructive text-xs">
-                        {fieldErr(profileState.fieldErrors, "email")}
-                      </p>
-                    ) : (
-                      <p className="text-muted-foreground text-xs">
-                        Used for sign-in and event notifications.
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="profile-bio">Bio</Label>
-                    <Textarea
-                      id="profile-bio"
-                      name="bio"
-                      rows={4}
-                      maxLength={2000}
-                      placeholder="Share a little about your background and interests."
-                      defaultValue={user.bio ?? ""}
-                      className="min-h-[100px] resize-y"
-                      aria-invalid={!!fieldErr(profileState.fieldErrors, "bio")}
-                    />
-                    {fieldErr(profileState.fieldErrors, "bio") ? (
-                      <p className="text-destructive text-xs">
-                        {fieldErr(profileState.fieldErrors, "bio")}
-                      </p>
-                    ) : null}
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-bio">Bio</Label>
+                  <Textarea
+                    id="profile-bio"
+                    name="bio"
+                    rows={4}
+                    maxLength={2000}
+                    placeholder="Share a little about your background and interests."
+                    defaultValue={user.bio ?? ""}
+                    className="min-h-[100px] resize-y"
+                    aria-invalid={!!fieldErr(profileState.fieldErrors, "bio")}
+                  />
+                  {fieldErr(profileState.fieldErrors, "bio") ? (
+                    <p className="text-destructive text-xs">
+                      {fieldErr(profileState.fieldErrors, "bio")}
+                    </p>
+                  ) : null}
                 </div>
                 {profileState.message ? (
                   <p
@@ -420,18 +508,18 @@ export function MePageClient({ user, events }: Props) {
           </Card>
 
           <Card>
-            <CardHeader className="border-border border-b">
+            <CardHeader className="border-border border-b p-4 sm:p-5">
               <CardTitle>Security</CardTitle>
               <CardDescription>
                 For your security, use a strong password you do not reuse
                 elsewhere.
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-5">
+            <CardContent className="p-4 pt-4 sm:p-5">
               <form
                 ref={passwordFormRef}
                 action={passwordAction}
-                className="flex max-w-md flex-col gap-4"
+                className="flex max-w-md flex-col gap-3"
               >
                 <div className="space-y-2">
                   <Label htmlFor="current-pw">Current password</Label>
@@ -512,18 +600,18 @@ export function MePageClient({ user, events }: Props) {
           </Card>
 
           <Card className="border-destructive/40 ring-destructive/20">
-            <CardHeader className="border-border border-b">
+            <CardHeader className="border-border border-b p-4 sm:p-5">
               <CardTitle className="text-destructive">Delete account</CardTitle>
               <CardDescription>
                 Permanently remove your account and all events you host. This
                 cannot be undone.
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-5">
+            <CardContent className="p-4 pt-4 sm:p-5">
               <form
                 ref={deleteFormRef}
                 action={deleteAction}
-                className="flex max-w-md flex-col gap-4"
+                className="flex max-w-md flex-col gap-3"
               >
                 <div className="space-y-2">
                   <Label htmlFor="delete-pw">Password</Label>
@@ -548,7 +636,7 @@ export function MePageClient({ user, events }: Props) {
                 </div>
               </form>
             </CardContent>
-            <CardFooter className="border-border flex flex-col items-stretch gap-3 border-t bg-transparent sm:flex-row sm:justify-start">
+            <CardFooter className="border-border flex flex-col items-stretch gap-2 border-t bg-transparent p-4 sm:flex-row sm:justify-start sm:p-5">
               <Button
                 type="button"
                 variant="destructive"

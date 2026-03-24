@@ -3,10 +3,12 @@
 import { useLayoutEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "attendees";
+type Tab = "overview" | "attendees" | "questions";
 
 function readTab(): Tab {
-  return window.location.hash === "#attendees" ? "attendees" : "overview";
+  if (window.location.hash === "#attendees") return "attendees";
+  if (window.location.hash === "#questions") return "questions";
+  return "overview";
 }
 
 /**
@@ -16,13 +18,17 @@ function readTab(): Tab {
 export function AdminEventEditPanels({
   overviewHref,
   attendeesHref,
+  questionsHref,
   overview,
   attendees,
+  questions,
 }: {
   overviewHref: string;
   attendeesHref: string;
+  questionsHref: string;
   overview: React.ReactNode;
   attendees: React.ReactNode;
+  questions: React.ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -49,10 +55,13 @@ export function AdminEventEditPanels({
         aria-label="Event sections"
       >
         <a href={overviewHref} className={linkClass(tab === "overview")}>
-          General Information
+          Event overview
         </a>
         <a href={attendeesHref} className={linkClass(tab === "attendees")}>
-          Attendees
+          Participants
+        </a>
+        <a href={questionsHref} className={linkClass(tab === "questions")}>
+          Registration questions
         </a>
       </nav>
       <section
@@ -63,6 +72,15 @@ export function AdminEventEditPanels({
         className="space-y-3 p-4"
       >
         {overview}
+      </section>
+      <section
+        id="questions"
+        role="tabpanel"
+        aria-labelledby="tab-questions"
+        hidden={tab !== "questions"}
+        className="space-y-3 p-4"
+      >
+        {questions}
       </section>
       <section
         id="attendees"

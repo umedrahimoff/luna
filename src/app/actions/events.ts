@@ -1,5 +1,7 @@
 "use server";
 
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { EventFormat, Prisma } from "@prisma/client";
@@ -20,6 +22,7 @@ export type ActionState = {
   ok: boolean;
   message?: string;
   fieldErrors?: Record<string, string[]>;
+  values?: ReturnType<typeof formDataToObject>;
 };
 
 function formDataToObject(formData: FormData) {
@@ -30,10 +33,43 @@ function formDataToObject(formData: FormData) {
     endsAt: String(formData.get("endsAt") ?? ""),
     format: String(formData.get("format") ?? "") as EventFormat,
     location: String(formData.get("location") ?? "") || undefined,
+    locationMapUrl: String(formData.get("locationMapUrl") ?? "") || undefined,
+    meetingUrl: String(formData.get("meetingUrl") ?? "") || undefined,
     capacity: String(formData.get("capacity") ?? ""),
-    coverImageUrl: String(formData.get("coverImageUrl") ?? ""),
+    coverImageUrl: "",
     categoryId: String(formData.get("categoryId") ?? ""),
   };
+}
+
+async function uploadEventCover(
+  file: FormDataEntryValue | null,
+): Promise<{ ok: true; url: string | null } | { ok: false; message: string }> {
+  if (!(file instanceof File) || file.size <= 0) {
+    return { ok: true, url: null };
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return { ok: false, message: "Cover image must be 5MB or smaller" };
+  }
+  const t = file.type.toLowerCase();
+  const ext =
+    t === "image/jpeg" || t === "image/jpg"
+      ? "jpg"
+      : t === "image/png"
+        ? "png"
+        : t === "image/webp"
+          ? "webp"
+          : null;
+  if (!ext) {
+    return { ok: false, message: "Allowed cover formats: JPG, PNG, WEBP" };
+  }
+  const fileName = `event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const relPath = `/uploads/events/${fileName}`;
+  const absDir = path.join(process.cwd(), "public", "uploads", "events");
+  const absPath = path.join(absDir, fileName);
+  await mkdir(absDir, { recursive: true });
+  const bytes = await file.arrayBuffer();
+  await writeFile(absPath, Buffer.from(bytes));
+  return { ok: true, url: relPath };
 }
 
 export async function createEvent(
@@ -44,7 +80,8 @@ export async function createEvent(
   if (!user) {
     redirect("/login");
   }
-  const parsed = eventFormSchema.safeParse(formDataToObject(formData));
+  const values = formDataToObject(formData);
+  const parsed = eventFormSchema.safeParse(values);
   if (!parsed.success) {
     return {
       ok: false,
@@ -52,6 +89,7 @@ export async function createEvent(
         string,
         string[]
       >,
+      values,
     };
   }
   const startsAt = parseStartsAt(parsed.data.startsAt);
@@ -59,6 +97,7 @@ export async function createEvent(
     return {
       ok: false,
       fieldErrors: { startsAt: ["Invalid date"] },
+      values,
     };
   }
   const endsAt = parseEndsAt(parsed.data.endsAt);
@@ -66,12 +105,14 @@ export async function createEvent(
     return {
       ok: false,
       fieldErrors: { endsAt: ["Invalid date"] },
+      values,
     };
   }
   if (endsAt.getTime() <= startsAt.getTime()) {
     return {
       ok: false,
       fieldErrors: { endsAt: ["End must be after start"] },
+      values,
     };
   }
   const category = await db.category.findUnique({
@@ -81,6 +122,7 @@ export async function createEvent(
     return {
       ok: false,
       fieldErrors: { categoryId: ["Category not found"] },
+      values,
     };
   }
   const baseData = {
@@ -93,20 +135,38 @@ export async function createEvent(
       parsed.data.format === EventFormat.OFFLINE
         ? parsed.data.location?.trim() ?? null
         : null,
+    locationMapUrl:
+      parsed.data.format === EventFormat.OFFLINE
+        ? parsed.data.locationMapUrl?.trim() || null
+        : null,
+    meetingUrl:
+      parsed.data.format === EventFormat.ONLINE
+        ? parsed.data.meetingUrl?.trim() || null
+        : null,
     capacity: capacityFromForm(parsed.data.capacity),
-    coverImageUrl: coverUrlFromForm(parsed.data.coverImageUrl),
+    coverImageUrl: null as string | null,
     categoryId: category.id,
     userId: user.id,
   };
+  const coverUpload = await uploadEventCover(formData.get("coverImage"));
+  if (!coverUpload.ok) {
+    return {
+      ok: false,
+      fieldErrors: { coverImage: [coverUpload.message] },
+      values,
+    };
+  }
+  baseData.coverImageUrl = coverUpload.url;
 
-  let created = false;
+  let createdPublicCode: string | null = null;
   for (let i = 0; i < 24; i++) {
     const publicCode = generateEventPublicCode();
     try {
-      await db.event.create({
+      const createdEvent = await db.event.create({
         data: { ...baseData, publicCode },
+        select: { publicCode: true },
       });
-      created = true;
+      createdPublicCode = createdEvent.publicCode;
       break;
     } catch (e) {
       if (
@@ -118,7 +178,7 @@ export async function createEvent(
       throw e;
     }
   }
-  if (!created) {
+  if (!createdPublicCode) {
     return { ok: false, message: "Could not generate event link code" };
   }
 
@@ -126,7 +186,7 @@ export async function createEvent(
   revalidatePath("/me");
   revalidatePath("/admin");
   revalidatePath("/admin/events");
-  redirect("/me");
+  redirect(`/${createdPublicCode}`);
 }
 
 export async function updateEvent(
@@ -139,7 +199,8 @@ export async function updateEvent(
     return { ok: false, message: "Invalid event id" };
   }
   const redirectAfter = String(formData.get("_redirect") ?? "");
-  const parsed = eventFormSchema.safeParse(formDataToObject(formData));
+  const values = formDataToObject(formData);
+  const parsed = eventFormSchema.safeParse(values);
   if (!parsed.success) {
     return {
       ok: false,
@@ -147,6 +208,7 @@ export async function updateEvent(
         string,
         string[]
       >,
+      values,
     };
   }
   const startsAt = parseStartsAt(parsed.data.startsAt);
@@ -154,6 +216,7 @@ export async function updateEvent(
     return {
       ok: false,
       fieldErrors: { startsAt: ["Invalid date"] },
+      values,
     };
   }
   const endsAt = parseEndsAt(parsed.data.endsAt);
@@ -161,12 +224,14 @@ export async function updateEvent(
     return {
       ok: false,
       fieldErrors: { endsAt: ["Invalid date"] },
+      values,
     };
   }
   if (endsAt.getTime() <= startsAt.getTime()) {
     return {
       ok: false,
       fieldErrors: { endsAt: ["End must be after start"] },
+      values,
     };
   }
   const user = await getSessionUser();
@@ -182,8 +247,19 @@ export async function updateEvent(
     return {
       ok: false,
       fieldErrors: { categoryId: ["Category not found"] },
+      values,
     };
   }
+  const coverUpload = await uploadEventCover(formData.get("coverImage"));
+  if (!coverUpload.ok) {
+    return {
+      ok: false,
+      fieldErrors: { coverImage: [coverUpload.message] },
+      values,
+    };
+  }
+  const nextCoverImageUrl =
+    coverUpload.url ?? coverUrlFromForm(existing.coverImageUrl ?? undefined);
   await db.event.update({
     where: { id: eventId },
     data: {
@@ -196,8 +272,16 @@ export async function updateEvent(
         parsed.data.format === EventFormat.OFFLINE
           ? parsed.data.location?.trim() ?? null
           : null,
+      locationMapUrl:
+        parsed.data.format === EventFormat.OFFLINE
+          ? parsed.data.locationMapUrl?.trim() || null
+          : null,
+      meetingUrl:
+        parsed.data.format === EventFormat.ONLINE
+          ? parsed.data.meetingUrl?.trim() || null
+          : null,
       capacity: capacityFromForm(parsed.data.capacity),
-      coverImageUrl: coverUrlFromForm(parsed.data.coverImageUrl),
+      coverImageUrl: nextCoverImageUrl,
       categoryId: category.id,
     },
   });

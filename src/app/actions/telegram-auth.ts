@@ -3,132 +3,130 @@
 import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
-import { TelegramAuthKind } from "@prisma/client";
 import { db } from "@/lib/db";
 import { joinDisplayName } from "@/lib/display-name";
-import {
-  telegramLoginCodeSchema,
-  telegramLoginVerifySchema,
-  telegramRegisterSchema,
-} from "@/lib/schemas/telegram-auth";
 import {
   createUserSessionToken,
   setUserSessionCookie,
   userSessionConfigured,
 } from "@/lib/user-token";
 import {
-  generateTelegramOneTimeCode,
-  getTelegramBotToken,
-  telegramSendMessage,
-} from "@/lib/telegram";
-import { parsePublicUsername } from "@/lib/username";
+  telegramLoginCompleteSchema,
+  telegramLoginRequestSchema,
+  telegramLoginSlugSchema,
+  telegramRegisterSchema,
+} from "@/lib/schemas/telegram-auth";
+import { sendTelegramMessage, telegramBotConfigured } from "@/lib/telegram-api";
 
 export type TelegramAuthState = {
   ok: boolean;
   message?: string;
+  fieldErrors?: Record<string, string[] | undefined>;
 };
 
-const CODE_TTL_MS = 15 * 60 * 1000;
-
-function syntheticEmailFromLogin(login: string): string {
-  return `${login.toLowerCase()}@telegram.luna`;
+function notConfigured(): TelegramAuthState {
+  return {
+    ok: false,
+    message:
+      "Telegram sign-in is not configured: set TELEGRAM_BOT_TOKEN in .env and point webhook to /api/telegram/webhook.",
+  };
 }
 
-export async function registerWithTelegramCode(
+export async function registerWithTelegram(
   _prev: TelegramAuthState | undefined,
   formData: FormData,
 ): Promise<TelegramAuthState> {
   if (!userSessionConfigured()) {
     return {
       ok: false,
-      message:
-        "Сессии отключены: задайте LUNA_SESSION_SECRET (≥16 символов) в .env",
+      message: "Sessions are disabled: set LUNA_SESSION_SECRET (>= 16 chars).",
+    };
+  }
+  if (!telegramBotConfigured()) {
+    return notConfigured();
+  }
+
+  const slugParsed = telegramLoginSlugSchema.safeParse(
+    String(formData.get("loginSlug") ?? ""),
+  );
+  if (!slugParsed.success) {
+    return {
+      ok: false,
+      fieldErrors: {
+        loginSlug: [slugParsed.error.issues[0]?.message ?? "Invalid login"],
+      },
     };
   }
 
   const parsed = telegramRegisterSchema.safeParse({
     code: String(formData.get("code") ?? ""),
-    login: String(formData.get("login") ?? ""),
     firstName: String(formData.get("firstName") ?? ""),
     lastName: String(formData.get("lastName") ?? ""),
   });
   if (!parsed.success) {
-    return {
-      ok: false,
-      message: Object.values(parsed.error.flatten().fieldErrors)[0]?.[0],
-    };
+    const fe = parsed.error.flatten().fieldErrors;
+    return { ok: false, fieldErrors: fe };
   }
-
-  const uCheck = parsePublicUsername(parsed.data.login);
-  if (!uCheck.ok) {
-    return { ok: false, message: uCheck.message };
-  }
-  if (!uCheck.value) {
-    return { ok: false, message: "Укажите логин (латиница, цифры, _)." };
-  }
-  const login = uCheck.value;
 
   const codeNorm = parsed.data.code.trim().toUpperCase();
-  const row = await db.telegramAuthCode.findUnique({
-    where: { code: codeNorm },
+  const row = await db.telegramAuthCode.findFirst({
+    where: {
+      code: codeNorm,
+      purpose: "signup",
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
   });
-  if (
-    !row ||
-    row.kind !== TelegramAuthKind.REGISTER ||
-    row.usedAt != null ||
-    row.expiresAt <= new Date()
-  ) {
+  if (!row) {
     return {
       ok: false,
-      message: "Неверный или просроченный код. Запросите новый через бота.",
+      message: "Invalid or expired code. Send /start to the bot again.",
     };
   }
 
-  const email = syntheticEmailFromLogin(login);
-  const name = joinDisplayName(parsed.data.firstName, parsed.data.lastName);
-
-  const exists = await db.user.findFirst({
-    where: {
-      OR: [{ email }, { username: login }],
-    },
-    select: { id: true },
+  const existingTg = await db.user.findUnique({
+    where: { telegramUserId: row.telegramUserId },
   });
-  if (exists) {
-    return { ok: false, message: "Такой логин или аккаунт уже заняты." };
+  if (existingTg) {
+    return {
+      ok: false,
+      message:
+        "This Telegram account is already linked. Sign in with Telegram or email.",
+    };
   }
 
+  const takenLogin = await db.user.findUnique({
+    where: { loginSlug: slugParsed.data },
+  });
+  if (takenLogin) {
+    return {
+      ok: false,
+      fieldErrors: { loginSlug: ["This login is already taken."] },
+    };
+  }
+
+  const email = `${row.telegramUserId}@tg.luna`;
+  const name = joinDisplayName(parsed.data.firstName, parsed.data.lastName);
   const passwordHash = await bcrypt.hash(randomBytes(32).toString("hex"), 10);
 
-  try {
-    await db.$transaction(async (tx) => {
-      await tx.user.create({
-        data: {
-          email,
-          name,
-          username: login,
-          passwordHash,
-          telegramUserId: row.telegramUserId,
-        },
-      });
-      await tx.telegramAuthCode.update({
-        where: { id: row.id },
-        data: { usedAt: new Date() },
-      });
-    });
-  } catch {
-    return { ok: false, message: "Не удалось создать аккаунт. Попробуйте снова." };
-  }
-
-  const user = await db.user.findUnique({
-    where: { email },
-    select: { id: true },
+  const user = await db.user.create({
+    data: {
+      email,
+      name,
+      loginSlug: slugParsed.data,
+      telegramUserId: row.telegramUserId,
+      passwordHash,
+    },
   });
-  if (!user) {
-    return { ok: false, message: "Ошибка после регистрации." };
-  }
+
+  await db.telegramAuthCode.update({
+    where: { id: row.id },
+    data: { usedAt: new Date() },
+  });
+
   const token = createUserSessionToken(user.id);
   if (!token) {
-    return { ok: false, message: "Не удалось создать сессию." };
+    return { ok: false, message: "Failed to create session." };
   }
   await setUserSessionCookie(token);
   redirect("/me");
@@ -138,115 +136,128 @@ export async function requestTelegramLoginCode(
   _prev: TelegramAuthState | undefined,
   formData: FormData,
 ): Promise<TelegramAuthState> {
-  const parsed = telegramLoginCodeSchema.safeParse({
-    login: String(formData.get("login") ?? ""),
+  if (!telegramBotConfigured()) {
+    return notConfigured();
+  }
+
+  const parsed = telegramLoginRequestSchema.safeParse({
+    loginSlug: String(formData.get("loginSlug") ?? ""),
   });
   if (!parsed.success) {
     return {
       ok: false,
-      message: Object.values(parsed.error.flatten().fieldErrors)[0]?.[0],
+      fieldErrors: parsed.error.flatten().fieldErrors,
     };
   }
 
-  const raw = parsed.data.login.trim().toLowerCase();
-  const user = await db.user.findFirst({
-    where: {
-      OR: [{ username: raw }, { email: raw }],
-    },
-    select: { id: true, telegramUserId: true },
+  const slugParsed = telegramLoginSlugSchema.safeParse(parsed.data.loginSlug);
+  if (!slugParsed.success) {
+    return {
+      ok: false,
+      fieldErrors: {
+        loginSlug: [slugParsed.error.issues[0]?.message ?? "Invalid login"],
+      },
+    };
+  }
+
+  const user = await db.user.findUnique({
+    where: { loginSlug: slugParsed.data },
   });
   if (!user?.telegramUserId) {
     return {
       ok: false,
       message:
-        "Пользователь не найден или Telegram не привязан. Войдите по паролю или зарегистрируйтесь через бота.",
+        "User not found, or this login is available only for email/password sign in.",
     };
   }
 
-  if (!getTelegramBotToken()) {
-    return {
-      ok: false,
-      message:
-        "Бот не настроен (LUNA_TELEGRAM_BOT_TOKEN). Обратитесь к администратору.",
-    };
-  }
-
-  const code = generateTelegramOneTimeCode();
-  const expiresAt = new Date(Date.now() + CODE_TTL_MS);
-
-  await db.telegramAuthCode.create({
-    data: {
-      code,
-      kind: TelegramAuthKind.LOGIN,
-      telegramUserId: user.telegramUserId,
-      expiresAt,
+  await db.telegramAuthCode.deleteMany({
+    where: {
+      userId: user.id,
+      purpose: "login",
+      usedAt: null,
     },
   });
 
-  const sent = await telegramSendMessage(
+  const code = randomBytes(4).toString("hex").toUpperCase();
+  await db.telegramAuthCode.create({
+    data: {
+      code,
+      telegramUserId: user.telegramUserId,
+      purpose: "login",
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    },
+  });
+
+  const sent = await sendTelegramMessage(
     user.telegramUserId,
-    `Код для входа в Luna: <b>${code}</b>\n\nСрок действия 15 минут.`,
+    `Your Luna sign-in code: ${code}\n\nThis code is valid for 10 minutes.`,
   );
   if (!sent.ok) {
-    await db.telegramAuthCode.deleteMany({ where: { code } });
-    return {
-      ok: false,
-      message: sent.description ?? "Не удалось отправить код в Telegram.",
-    };
+    await db.telegramAuthCode.deleteMany({
+      where: { code, purpose: "login", userId: user.id },
+    });
+    return { ok: false, message: `Failed to send code: ${sent.error}` };
   }
 
-  return {
-    ok: true,
-    message: "Код отправлен в Telegram. Введите его ниже.",
-  };
+  return { ok: true, message: "Code sent to Telegram." };
 }
 
-export async function loginWithTelegramCode(
+export async function completeTelegramLogin(
   _prev: TelegramAuthState | undefined,
   formData: FormData,
 ): Promise<TelegramAuthState> {
   if (!userSessionConfigured()) {
     return {
       ok: false,
-      message:
-        "Сессии отключены: задайте LUNA_SESSION_SECRET в .env",
+      message: "Sessions are disabled: set LUNA_SESSION_SECRET (>= 16 chars).",
     };
   }
 
-  const parsed = telegramLoginVerifySchema.safeParse({
-    login: String(formData.get("login") ?? ""),
+  const parsed = telegramLoginCompleteSchema.safeParse({
+    loginSlug: String(formData.get("loginSlug") ?? ""),
     code: String(formData.get("code") ?? ""),
   });
   if (!parsed.success) {
     return {
       ok: false,
-      message: Object.values(parsed.error.flatten().fieldErrors)[0]?.[0],
+      fieldErrors: parsed.error.flatten().fieldErrors,
     };
   }
 
-  const raw = parsed.data.login.trim().toLowerCase();
-  const user = await db.user.findFirst({
-    where: {
-      OR: [{ username: raw }, { email: raw }],
-    },
-    select: { id: true, telegramUserId: true },
+  const slugParsed = telegramLoginSlugSchema.safeParse(parsed.data.loginSlug);
+  if (!slugParsed.success) {
+    return {
+      ok: false,
+      fieldErrors: {
+        loginSlug: [slugParsed.error.issues[0]?.message ?? "Invalid login"],
+      },
+    };
+  }
+
+  const user = await db.user.findUnique({
+    where: { loginSlug: slugParsed.data },
   });
-  if (!user?.telegramUserId) {
-    return { ok: false, message: "Пользователь не найден." };
+  if (!user) {
+    return { ok: false, message: "User not found." };
   }
 
   const codeNorm = parsed.data.code.trim().toUpperCase();
-  const row = await db.telegramAuthCode.findUnique({
-    where: { code: codeNorm },
+  const row = await db.telegramAuthCode.findFirst({
+    where: {
+      code: codeNorm,
+      purpose: "login",
+      userId: user.id,
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
   });
-  if (
-    !row ||
-    row.kind !== TelegramAuthKind.LOGIN ||
-    row.usedAt != null ||
-    row.expiresAt <= new Date() ||
-    row.telegramUserId !== user.telegramUserId
-  ) {
-    return { ok: false, message: "Неверный или просроченный код." };
+  if (!row) {
+    return {
+      ok: false,
+      message: "Invalid or expired code.",
+    };
   }
 
   await db.telegramAuthCode.update({
@@ -256,9 +267,10 @@ export async function loginWithTelegramCode(
 
   const token = createUserSessionToken(user.id);
   if (!token) {
-    return { ok: false, message: "Не удалось создать сессию." };
+    return { ok: false, message: "Failed to create session." };
   }
   await setUserSessionCookie(token);
+
   const next = String(formData.get("next") ?? "").trim();
   if (next.startsWith("/") && !next.startsWith("//")) {
     redirect(next);

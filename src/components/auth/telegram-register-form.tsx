@@ -1,91 +1,138 @@
 "use client";
 
 import { useActionState, useMemo } from "react";
+import Link from "next/link";
 import {
-  registerWithTelegramCode,
+  registerWithTelegram,
   type TelegramAuthState,
 } from "@/app/actions/telegram-auth";
-import { authInputClass, authPrimaryButtonClass } from "@/components/auth/auth-fields";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LUNA_TELEGRAM_BOT_URL } from "@/lib/telegram-constants";
 
 const initial: TelegramAuthState = { ok: false };
 
+function fieldErr(
+  fe: Record<string, string[] | undefined> | undefined,
+  key: string,
+) {
+  return fe?.[key]?.[0];
+}
+
 export function TelegramRegisterForm() {
-  const action = useMemo(() => registerWithTelegramCode, []);
+  const action = useMemo(() => registerWithTelegram, []);
   const [state, formAction, pending] = useActionState(action, initial);
 
   return (
-    <form action={formAction} className="flex w-full flex-col gap-4">
-      <p className="text-zinc-400 text-sm leading-relaxed">
-        Отправьте <span className="text-zinc-200">/start</span> боту{" "}
+    <form action={formAction} className="flex w-full min-w-0 flex-col gap-4">
+      <p className="text-muted-foreground text-sm leading-relaxed">
+        Send{" "}
+        <code className="text-foreground bg-muted rounded px-1 py-0.5 text-xs">
+          /start
+        </code>{" "}
+        to bot{" "}
         <a
-          href="https://t.me/getlunabot"
+          href={LUNA_TELEGRAM_BOT_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-zinc-100 underline underline-offset-2"
+          className="text-primary font-medium underline underline-offset-4"
         >
           @getlunabot
         </a>{" "}
-        в Telegram, получите код и введите его ниже.
+        in Telegram, get a code, then enter it below.
       </p>
+
       <div className="space-y-2">
-        <label htmlFor="tg-code" className="text-zinc-100 text-sm font-medium">
-          Код из Telegram
-        </label>
-        <input
-          id="tg-code"
+        <Label htmlFor="tg-reg-code">Telegram code</Label>
+        <Input
+          id="tg-reg-code"
           name="code"
           required
           autoComplete="one-time-code"
           placeholder="ABC12345"
-          className={authInputClass}
+          className="font-mono uppercase"
+          aria-invalid={!!fieldErr(state.fieldErrors, "code")}
         />
+        {fieldErr(state.fieldErrors, "code") ? (
+          <p className="text-destructive text-xs">
+            {fieldErr(state.fieldErrors, "code")}
+          </p>
+        ) : null}
       </div>
+
       <div className="space-y-2">
-        <label htmlFor="tg-login" className="text-zinc-100 text-sm font-medium">
-          Логин
-        </label>
-        <input
-          id="tg-login"
-          name="login"
+        <Label htmlFor="tg-reg-login">Login</Label>
+        <Input
+          id="tg-reg-login"
+          name="loginSlug"
           required
           autoComplete="username"
-          placeholder="admin"
-          className={authInputClass}
+          placeholder="ivan_petrov"
+          className="font-mono text-sm"
+          aria-invalid={!!fieldErr(state.fieldErrors, "loginSlug")}
         />
+        {fieldErr(state.fieldErrors, "loginSlug") ? (
+          <p className="text-destructive text-xs">
+            {fieldErr(state.fieldErrors, "loginSlug")}
+          </p>
+        ) : (
+          <p className="text-muted-foreground text-xs">
+            Latin letters, numbers, and underscore, 3-30 chars.
+          </p>
+        )}
       </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <label htmlFor="tg-fn" className="text-zinc-100 text-sm font-medium">
-            Имя
-          </label>
-          <input
-            id="tg-fn"
+          <Label htmlFor="tg-reg-fn">First name</Label>
+          <Input
+            id="tg-reg-fn"
             name="firstName"
             required
+            maxLength={60}
             autoComplete="given-name"
-            placeholder="Иван"
-            className={authInputClass}
+            placeholder="Ivan"
+            aria-invalid={!!fieldErr(state.fieldErrors, "firstName")}
           />
+          {fieldErr(state.fieldErrors, "firstName") ? (
+            <p className="text-destructive text-xs">
+              {fieldErr(state.fieldErrors, "firstName")}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-2">
-          <label htmlFor="tg-ln" className="text-zinc-100 text-sm font-medium">
-            Фамилия
-          </label>
-          <input
-            id="tg-ln"
+          <Label htmlFor="tg-reg-ln">Last name</Label>
+          <Input
+            id="tg-reg-ln"
             name="lastName"
+            maxLength={60}
             autoComplete="family-name"
-            placeholder="Иванов"
-            className={authInputClass}
+            placeholder="Petrov"
+            aria-invalid={!!fieldErr(state.fieldErrors, "lastName")}
           />
+          {fieldErr(state.fieldErrors, "lastName") ? (
+            <p className="text-destructive text-xs">
+              {fieldErr(state.fieldErrors, "lastName")}
+            </p>
+          ) : null}
         </div>
       </div>
+
       {state.message && !state.ok ? (
-        <p className="text-red-400 text-sm">{state.message}</p>
+        <p className="text-destructive text-sm">{state.message}</p>
       ) : null}
-      <button type="submit" disabled={pending} className={authPrimaryButtonClass}>
-        {pending ? "Регистрация…" : "Зарегистрироваться"}
-      </button>
+
+      <Button type="submit" disabled={pending} className="w-full">
+        {pending ? "Signing up…" : "Sign up"}
+      </Button>
+
+      <p className="text-muted-foreground text-center text-sm">
+        Already have an account?{" "}
+        <Link href="/login" className="text-primary font-medium underline">
+          Sign in
+        </Link>
+      </p>
     </form>
   );
 }

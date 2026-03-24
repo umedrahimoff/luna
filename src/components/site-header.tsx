@@ -63,9 +63,6 @@ function HeaderIconSlots() {
 
 export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
   const pathname = usePathname();
-  if (pathname === "/login" || pathname === "/register") {
-    return null;
-  }
   const isAdminPanel =
     pathname.startsWith("/admin") && !pathname.startsWith("/admin/login");
 
@@ -170,7 +167,7 @@ export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
           </div>
 
           {/* Desktop: logo in left viewport band; menu + tools in same centered column as <main> */}
-          <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 hidden w-full grid-cols-[minmax(0,1fr)_min(100%,48rem)_minmax(0,1fr)] items-center md:grid">
+          <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 hidden w-full grid-cols-[minmax(0,1fr)_min(100%,64rem)_minmax(0,1fr)] items-center md:grid">
             <div className="flex h-14 items-center justify-start self-stretch pl-3 sm:pl-4">
               <Link
                 href="/discover"

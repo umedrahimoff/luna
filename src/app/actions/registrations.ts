@@ -32,7 +32,20 @@ export async function registerForEvent(
 
   const event = await db.event.findUnique({
     where: { id: eventId },
-    include: { _count: { select: { registrations: true } } },
+    include: {
+      _count: { select: { registrations: true } },
+      registrationQuestions: {
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+          type: true,
+          label: true,
+          placeholder: true,
+          optionsJson: true,
+          required: true,
+        },
+      },
+    },
   });
   if (!event) {
     return { ok: false, message: "Event not found" };
@@ -44,12 +57,40 @@ export async function registerForEvent(
     return { ok: false, message: "Registration closed: capacity reached" };
   }
 
+  const dynamicFieldErrors: Record<string, string[]> = {};
+  const answers: Record<string, string | boolean> = {};
+  for (const q of event.registrationQuestions) {
+    const key = `q_${q.id}`;
+    if (q.type === "checkbox" || q.type === "terms") {
+      const checked = String(formData.get(key) ?? "") === "on";
+      if (q.required && !checked) {
+        dynamicFieldErrors[key] = ["This field is required"];
+      } else {
+        answers[String(q.id)] = checked;
+      }
+      continue;
+    }
+    const value = String(formData.get(key) ?? "").trim();
+    if (q.required && !value) {
+      dynamicFieldErrors[key] = ["This field is required"];
+    } else if (value) {
+      answers[String(q.id)] = value.slice(0, 500);
+    }
+  }
+  if (Object.keys(dynamicFieldErrors).length > 0) {
+    return { ok: false, fieldErrors: dynamicFieldErrors };
+  }
+
   try {
     await db.registration.create({
       data: {
         eventId,
         name: parsed.data.name,
         email: parsed.data.email.toLowerCase(),
+        answersJson:
+          Object.keys(answers).length > 0
+            ? (answers as Prisma.InputJsonValue)
+            : undefined,
       },
     });
   } catch (e) {

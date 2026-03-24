@@ -8,7 +8,7 @@ export const confirmMessages = {
   eventCreate: "Create this event?",
   eventSave: "Save changes to this event?",
   registerEvent: "Register for this event?",
-  signUp: "Create your account?",
+  signUp: "Sign up for Luna?",
   deleteEvent: "Delete this event? This cannot be undone.",
   deleteUser: "Delete this user? This cannot be undone.",
   deleteCategory: "Delete this category? This cannot be undone.",

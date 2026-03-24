@@ -9,6 +9,7 @@ import {
   setUserSessionCookie,
   userSessionConfigured,
 } from "@/lib/user-token";
+import { joinDisplayName } from "@/lib/display-name";
 import { loginSchema, registerSchema } from "@/lib/schemas/auth";
 
 export type AuthState = { ok: boolean; message?: string };
@@ -25,7 +26,8 @@ export async function registerUser(
     };
   }
   const parsed = registerSchema.safeParse({
-    name: String(formData.get("name") ?? ""),
+    firstName: String(formData.get("firstName") ?? ""),
+    lastName: String(formData.get("lastName") ?? ""),
     email: String(formData.get("email") ?? ""),
     password: String(formData.get("password") ?? ""),
   });
@@ -41,10 +43,11 @@ export async function registerUser(
     return { ok: false, message: "A user with this email already exists" };
   }
   const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+  const name = joinDisplayName(parsed.data.firstName, parsed.data.lastName);
   const user = await db.user.create({
     data: {
       email,
-      name: parsed.data.name,
+      name,
       passwordHash,
     },
   });
@@ -68,7 +71,7 @@ export async function loginUser(
     };
   }
   const parsed = loginSchema.safeParse({
-    login: String(formData.get("login") ?? ""),
+    email: String(formData.get("email") ?? ""),
     password: String(formData.get("password") ?? ""),
   });
   if (!parsed.success) {
@@ -77,18 +80,14 @@ export async function loginUser(
       message: Object.values(parsed.error.flatten().fieldErrors)[0]?.[0],
     };
   }
-  const raw = parsed.data.login.trim().toLowerCase();
-  const user = await db.user.findFirst({
-    where: {
-      OR: [{ email: raw }, { username: raw }],
-    },
-  });
+  const email = parsed.data.email.toLowerCase();
+  const user = await db.user.findUnique({ where: { email } });
   if (!user) {
-    return { ok: false, message: "Неверный логин или пароль" };
+    return { ok: false, message: "Invalid email or password" };
   }
   const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
   if (!ok) {
-    return { ok: false, message: "Неверный логин или пароль" };
+    return { ok: false, message: "Invalid email or password" };
   }
   const token = createUserSessionToken(user.id);
   if (!token) {

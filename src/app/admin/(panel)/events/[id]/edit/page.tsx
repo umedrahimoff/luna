@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Event } from "@prisma/client";
 import { AdminEventAttendeesSection } from "@/components/admin-event-attendees-section";
 import { AdminEventEditPanels } from "@/components/admin-event-edit-panels";
+import { AdminEventRegistrationQuestionsSection } from "@/components/admin-event-registration-questions-section";
 import { AdminEntityLayout } from "@/components/admin-entity-layout";
 import { AdminTechnicalAside } from "@/components/admin-technical-aside";
 import { EventForm } from "@/components/event-form";
@@ -51,6 +52,17 @@ export default async function AdminEditEventPage({
       user: { select: { id: true, name: true, email: true } },
       category: { select: { id: true, name: true } },
       _count: { select: { registrations: true } },
+      registrationQuestions: {
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+          type: true,
+          label: true,
+          placeholder: true,
+          optionsJson: true,
+          required: true,
+        },
+      },
     },
   });
   if (!event) notFound();
@@ -113,10 +125,11 @@ export default async function AdminEditEventPage({
       <AdminEventEditPanels
         overviewHref={`${editWithListQuery}#overview`}
         attendeesHref={`${editWithListQuery}#attendees`}
+        questionsHref={`${editWithListQuery}#questions`}
         overview={
           <>
             <h3 id="tab-overview" className="sr-only">
-              General information
+              Event overview
             </h3>
             <EventForm
               mode="edit"
@@ -129,7 +142,7 @@ export default async function AdminEditEventPage({
         attendees={
           <>
             <h3 id="tab-attendees" className="sr-only">
-              Attendees
+              Participants
             </h3>
             <AdminEventAttendeesSection
               action={editBase}
@@ -140,6 +153,17 @@ export default async function AdminEditEventPage({
               registrations={event.registrations}
               totalRegs={totalRegs}
               searchQuery={q}
+            />
+          </>
+        }
+        questions={
+          <>
+            <h3 id="tab-questions" className="sr-only">
+              Registration questions
+            </h3>
+            <AdminEventRegistrationQuestionsSection
+              eventId={event.id}
+              questions={event.registrationQuestions}
             />
           </>
         }

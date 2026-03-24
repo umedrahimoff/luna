@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { EventFormat } from "@prisma/client";
 
-function optionalImageUrl(val: string | undefined): string | undefined {
-  const t = val?.trim();
-  return t || undefined;
-}
-
 export const eventFormSchema = z
   .object({
     title: z.string().trim().min(1, "Enter a title").max(200),
@@ -14,8 +9,9 @@ export const eventFormSchema = z
     endsAt: z.string().min(1, "Enter end date and time"),
     format: z.nativeEnum(EventFormat),
     location: z.string().trim().max(500).optional(),
+    locationMapUrl: z.string().optional(),
+    meetingUrl: z.string().optional(),
     capacity: z.string().optional(),
-    coverImageUrl: z.string().optional(),
     categoryId: z.coerce.number().int().positive("Select a category"),
   })
   .superRefine((data, ctx) => {
@@ -28,6 +24,40 @@ export const eventFormSchema = z
           path: ["location"],
         });
       }
+      const mapUrl = data.locationMapUrl?.trim();
+      if (mapUrl) {
+        try {
+          const u = new URL(mapUrl);
+          if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error();
+        } catch {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Map link must start with http:// or https://",
+            path: ["locationMapUrl"],
+          });
+        }
+      }
+    }
+    if (data.format === EventFormat.ONLINE) {
+      const meetingUrl = data.meetingUrl?.trim();
+      if (!meetingUrl) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter a meeting link for online events",
+          path: ["meetingUrl"],
+        });
+      } else {
+        try {
+          const u = new URL(meetingUrl);
+          if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error();
+        } catch {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Meeting link must start with http:// or https://",
+            path: ["meetingUrl"],
+          });
+        }
+      }
     }
     const cap = data.capacity?.trim();
     if (cap) {
@@ -37,21 +67,6 @@ export const eventFormSchema = z
           code: z.ZodIssueCode.custom,
           message: "Capacity must be a whole number greater than 0",
           path: ["capacity"],
-        });
-      }
-    }
-    const cover = optionalImageUrl(data.coverImageUrl);
-    if (cover) {
-      try {
-        const u = new URL(cover);
-        if (u.protocol !== "http:" && u.protocol !== "https:") {
-          throw new Error();
-        }
-      } catch {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Cover URL must start with http:// or https://",
-          path: ["coverImageUrl"],
         });
       }
     }
@@ -74,9 +89,7 @@ export function capacityFromForm(capacity: string | undefined): number | null {
   return Number(cap);
 }
 
-export function coverUrlFromForm(
-  coverImageUrl: string | undefined,
-): string | null {
+export function coverUrlFromForm(coverImageUrl: string | undefined): string | null {
   const c = coverImageUrl?.trim();
   return c || null;
 }

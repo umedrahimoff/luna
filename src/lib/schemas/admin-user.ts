@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { registerSchema } from "@/lib/schemas/auth";
 
 /** Literals instead of `UserRole` from `@prisma/client` — enum may be undefined at module load (Turbopack). */
 const USER_ROLES = ["USER", "MODERATOR", "ADMIN"] as const;
@@ -8,8 +7,11 @@ const userRoleSchema = z.enum(USER_ROLES, {
   message: "Invalid role",
 });
 
-/** Admin user creation — same rules as registration + role. */
-export const adminUserCreateSchema = registerSchema.extend({
+/** Admin user creation — single display name + role (not split first/last like public signup). */
+export const adminUserCreateSchema = z.object({
+  name: z.string().trim().min(1, "Enter name").max(120),
+  email: z.string().trim().email("Invalid email").max(320),
+  password: z.string().min(8, "Password must be at least 8 characters").max(200),
   role: userRoleSchema.default("USER"),
 });
 

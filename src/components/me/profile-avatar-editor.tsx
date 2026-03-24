@@ -37,23 +37,23 @@ export function ProfileAvatarEditor({ avatarUrl, initials, avatarBg }: Props) {
   }, [state.ok, clearState.ok, router]);
 
   return (
-    <div className="flex flex-col items-center gap-2 sm:items-end">
-      <span className="text-muted-foreground w-full text-center text-sm sm:w-auto sm:text-right">
+    <div className="flex flex-col items-center gap-1.5 sm:items-end">
+      <span className="text-muted-foreground w-full text-center text-xs sm:w-auto sm:text-right">
         Profile picture
       </span>
-      <div className="relative mx-auto size-28 sm:mx-0">
+      <div className="relative mx-auto size-24 sm:mx-0">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- user uploads from /public
           <img
             src={avatarUrl}
             alt=""
-            width={112}
-            height={112}
-            className="size-28 rounded-full object-cover ring-2 ring-foreground/10"
+            width={96}
+            height={96}
+            className="size-24 rounded-full object-cover ring-2 ring-foreground/10"
           />
         ) : (
           <span
-            className="flex size-28 items-center justify-center rounded-full text-xl font-semibold text-white shadow-inner ring-2 ring-white/10"
+            className="flex size-24 items-center justify-center rounded-full text-lg font-semibold text-white shadow-inner ring-2 ring-white/10"
             style={{ backgroundColor: avatarBg }}
             aria-hidden
           >

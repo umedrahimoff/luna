@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { TelegramLoginForm } from "@/components/auth/telegram-login-form";
+import { AuthPageShell } from "@/components/auth/auth-page-shell";
+import { LoginForm } from "@/components/login-form";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { getSessionUser } from "@/lib/user-session";
 import { userSessionConfigured } from "@/lib/user-token";
+import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Вход — Luna" };
+export const metadata = { title: "Sign in — Luna" };
 
 type Props = { searchParams: Promise<{ next?: string }> };
 
@@ -19,49 +21,49 @@ export default async function LoginPage({ searchParams }: Props) {
     nextRaw?.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : undefined;
 
   const configured = userSessionConfigured();
+  const tgHref =
+    nextPath != null
+      ? `/auth/telegram/login?next=${encodeURIComponent(nextPath)}`
+      : "/auth/telegram/login";
 
   return (
-    <div className="flex min-h-[calc(100dvh-2rem)] flex-col">
-      <div className="mb-2 flex justify-center sm:justify-start">
-        <Link
-          href="/discover"
-          className="text-zinc-400 hover:text-zinc-100 inline-flex items-center gap-1.5 text-sm"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          На главную
-        </Link>
-      </div>
-      <div className="mb-6">
-        <h1 className="text-zinc-50 text-2xl font-semibold tracking-tight">
-          Вход
+    <AuthPageShell>
+      <div>
+        <h1 className="text-foreground text-xl font-semibold tracking-tight">
+          Sign in
         </h1>
-        <p className="text-zinc-400 mt-3 text-sm">
-          Нет аккаунта?{" "}
-          <Link
-            href="/register"
-            className="text-zinc-100 font-medium underline underline-offset-4"
-          >
-            Регистрация
+        <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+          No account yet?{" "}
+          <Link href="/register" className="text-primary font-medium underline">
+            Create one
           </Link>
         </p>
       </div>
       {!configured ? (
-        <p className="text-zinc-400 text-sm">
-          Задайте <code className="text-zinc-200">LUNA_SESSION_SECRET</code> в{" "}
-          <code className="text-zinc-200">.env</code> и перезапустите сервер.
+        <p className="text-muted-foreground text-sm">
+          Set{" "}
+          <code className="text-foreground">LUNA_SESSION_SECRET</code> in{" "}
+          <code className="text-foreground">.env</code> (at least 16 chars) and
+          restart the server.
         </p>
       ) : (
-        <TelegramLoginForm nextPath={nextPath} />
+        <>
+          <LoginForm nextPath={nextPath} />
+          <div className="border-border relative py-2 text-center text-xs text-muted-foreground">
+            <span className="bg-background relative z-10 px-2">or</span>
+            <span className="border-border absolute inset-x-0 top-1/2 z-0 border-t" />
+          </div>
+          <Link
+            href={tgHref}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "w-full justify-center",
+            )}
+          >
+            Sign in with Telegram
+          </Link>
+        </>
       )}
-      <footer className="text-zinc-500 mt-auto pt-12 text-center text-xs">
-        <Link href="/discover" className="hover:text-zinc-300">
-          Условия использования
-        </Link>
-        <span className="mx-2">·</span>
-        <Link href="/discover" className="hover:text-zinc-300">
-          Политика конфиденциальности
-        </Link>
-      </footer>
-    </div>
+    </AuthPageShell>
   );
 }
