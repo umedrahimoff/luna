@@ -60,6 +60,7 @@ type Props = {
     avatarUrl: string | null;
   };
   canDeleteAccount?: boolean;
+  deleteBlockedReason?: string;
   events: EventListItem[];
 };
 
@@ -74,7 +75,12 @@ function fieldErr(
   return fe?.[key]?.[0];
 }
 
-export function MePageClient({ user, canDeleteAccount = true, events }: Props) {
+export function MePageClient({
+  user,
+  canDeleteAccount = true,
+  deleteBlockedReason,
+  events,
+}: Props) {
   const router = useRouter();
   const sp = useSearchParams();
   const tabParam = sp.get("tab");
@@ -634,7 +640,8 @@ export function MePageClient({ user, canDeleteAccount = true, events }: Props) {
                     <p className="text-muted-foreground text-xs">
                       {canDeleteAccount
                         ? "Enter your password to confirm you own this account."
-                        : "This account is protected and cannot be deleted."}
+                        : (deleteBlockedReason ??
+                          "This account is protected and cannot be deleted.")}
                     </p>
                   )}
                 </div>

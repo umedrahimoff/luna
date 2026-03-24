@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { splitDisplayName } from "@/lib/display-name";
 import { requireUser } from "@/lib/require-user";
@@ -21,7 +22,14 @@ async function MeContent() {
   const session = await requireUser();
   const user = await db.user.findUnique({
     where: { id: session.id },
-    select: { name: true, email: true, bio: true, username: true, avatarUrl: true },
+    select: {
+      name: true,
+      email: true,
+      bio: true,
+      username: true,
+      avatarUrl: true,
+      role: true,
+    },
   });
   if (!user) {
     throw new Error("User not found");
@@ -38,6 +46,20 @@ async function MeContent() {
     },
   });
 
+  const isProtectedEmail =
+    (user.email ?? "").toLowerCase() === PROTECTED_ACCOUNT_EMAIL;
+  const adminCount =
+    user.role === UserRole.ADMIN
+      ? await db.user.count({ where: { role: UserRole.ADMIN } })
+      : 0;
+  const isLastAdmin = user.role === UserRole.ADMIN && adminCount <= 1;
+  const canDeleteAccount = !isProtectedEmail && !isLastAdmin;
+  const deleteBlockedReason = isProtectedEmail
+    ? "This account is protected and cannot be deleted."
+    : isLastAdmin
+      ? "You cannot delete the last administrator account."
+      : undefined;
+
   return (
     <MePageClient
       user={{
@@ -48,7 +70,8 @@ async function MeContent() {
         username: user.username,
         avatarUrl: user.avatarUrl,
       }}
-      canDeleteAccount={(user.email ?? "").toLowerCase() !== PROTECTED_ACCOUNT_EMAIL}
+      canDeleteAccount={canDeleteAccount}
+      deleteBlockedReason={deleteBlockedReason}
       events={events}
     />
   );

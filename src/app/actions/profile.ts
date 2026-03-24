@@ -4,6 +4,7 @@ import { mkdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
+import { UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   changePasswordSchema,
@@ -225,13 +226,19 @@ export async function deleteAccount(
   const session = await requireUser();
   const user = await db.user.findUnique({
     where: { id: session.id },
-    select: { id: true, passwordHash: true, email: true },
+    select: { id: true, passwordHash: true, email: true, role: true },
   });
   if (!user) {
     return { ok: false, message: "Session invalid" };
   }
   if ((user.email ?? "").toLowerCase() === PROTECTED_ACCOUNT_EMAIL) {
     return { ok: false, message: "This account is protected and cannot be deleted." };
+  }
+  if (user.role === UserRole.ADMIN) {
+    const adminCount = await db.user.count({ where: { role: UserRole.ADMIN } });
+    if (adminCount <= 1) {
+      return { ok: false, message: "You cannot delete the last administrator account." };
+    }
   }
 
   const parsed = deleteAccountSchema.safeParse({
