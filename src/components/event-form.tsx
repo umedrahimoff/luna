@@ -15,9 +15,19 @@ import { confirmMessages } from "@/lib/confirm-messages";
 import Link from "next/link";
 
 export type EventCategoryOption = { id: number; name: string };
+export type EventOwnerOption = {
+  id: number;
+  name: string;
+  email: string | null;
+};
 
 type Props =
-  | { mode: "create"; categories: EventCategoryOption[] }
+  | {
+      mode: "create";
+      categories: EventCategoryOption[];
+      ownerOptions?: EventOwnerOption[];
+      defaultOwnerId?: number;
+    }
   | {
       mode: "edit";
       event: Event;
@@ -302,6 +312,36 @@ export function EventForm(props: Props) {
             </p>
           ) : null}
         </div>
+
+        {props.mode === "create" && props.ownerOptions?.length ? (
+          <div className={fieldShell}>
+            <Label htmlFor="ownerUserId">Organizer</Label>
+            <select
+              id="ownerUserId"
+              name="ownerUserId"
+              defaultValue={
+                values?.ownerUserId ??
+                (props.defaultOwnerId != null ? String(props.defaultOwnerId) : "")
+              }
+              className={cn(
+                "border-input bg-background min-h-10 w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none",
+                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
+              )}
+            >
+              {props.ownerOptions.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                  {o.email ? ` (${o.email})` : ""}
+                </option>
+              ))}
+            </select>
+            {fieldError(state.fieldErrors, "ownerUserId") ? (
+              <p className="text-destructive text-sm">
+                {fieldError(state.fieldErrors, "ownerUserId")}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className={fieldShell}>
           <Label htmlFor="registrationMode">Registration</Label>

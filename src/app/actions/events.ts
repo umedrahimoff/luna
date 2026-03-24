@@ -34,6 +34,7 @@ function formDataToObject(formData: FormData) {
     format: String(formData.get("format") ?? "") as EventFormat,
     registrationMode:
       String(formData.get("registrationMode") ?? "") as RegistrationMode,
+    ownerUserId: String(formData.get("ownerUserId") ?? "") || undefined,
     externalRegistrationUrl:
       String(formData.get("externalRegistrationUrl") ?? "") || undefined,
     externalSourceLabel:
@@ -131,6 +132,31 @@ export async function createEvent(
       values,
     };
   }
+  const staff = await isStaffAccess();
+  let ownerUserId = user.id;
+  if (staff && parsed.data.ownerUserId) {
+    const targetOwnerId = parseRecordId(parsed.data.ownerUserId);
+    if (targetOwnerId == null) {
+      return {
+        ok: false,
+        fieldErrors: { ownerUserId: ["Select a valid organizer"] },
+        values,
+      };
+    }
+    const targetOwner = await db.user.findUnique({
+      where: { id: targetOwnerId },
+      select: { id: true },
+    });
+    if (!targetOwner) {
+      return {
+        ok: false,
+        fieldErrors: { ownerUserId: ["Organizer not found"] },
+        values,
+      };
+    }
+    ownerUserId = targetOwner.id;
+  }
+
   const baseData = {
     title: parsed.data.title,
     description: parsed.data.description,
@@ -161,7 +187,7 @@ export async function createEvent(
     capacity: capacityFromForm(parsed.data.capacity),
     coverImageUrl: null as string | null,
     categoryId: category.id,
-    userId: user.id,
+    userId: ownerUserId,
   };
   const coverUpload = await uploadEventCover(formData.get("coverImage"));
   if (!coverUpload.ok) {

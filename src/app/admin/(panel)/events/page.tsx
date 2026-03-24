@@ -101,7 +101,15 @@ export default async function AdminEventsPage({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-base font-semibold tracking-tight">All events</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-semibold tracking-tight">All events</h2>
+        <Link
+          href="/admin/events/new"
+          className={cn(buttonVariants({ size: "sm" }), "shrink-0")}
+        >
+          Create event
+        </Link>
+      </div>
 
       <AdminListToolbar
         action="/admin/events"

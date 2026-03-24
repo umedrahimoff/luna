@@ -11,6 +11,7 @@ export const eventFormSchema = z
     registrationMode: z.nativeEnum(RegistrationMode).default(
       RegistrationMode.INTERNAL,
     ),
+    ownerUserId: z.string().optional(),
     externalRegistrationUrl: z.string().optional(),
     externalSourceLabel: z.string().trim().max(80).optional(),
     location: z.string().trim().max(500).optional(),
