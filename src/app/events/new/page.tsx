@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { EventForm } from "@/components/event-form";
 import { db } from "@/lib/db";
+import { getUserLanguage } from "@/lib/i18n/server";
+import { localizedName } from "@/lib/localized-name";
 import { getSessionUser } from "@/lib/user-session";
 
 export default async function NewEventPage() {
@@ -9,10 +11,15 @@ export default async function NewEventPage() {
     redirect("/login?next=/events/new");
   }
 
-  const categories = await db.category.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
+  const language = await getUserLanguage();
+  const categoriesRaw = await db.category.findMany({
+    orderBy: { nameEn: "asc" },
+    select: { id: true, name: true, nameEn: true, nameRu: true },
   });
+  const categories = categoriesRaw.map((c) => ({
+    id: c.id,
+    name: localizedName(c, language),
+  }));
 
   return (
     <div className="flex flex-col gap-4">

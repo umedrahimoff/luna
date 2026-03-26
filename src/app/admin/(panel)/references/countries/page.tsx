@@ -30,6 +30,8 @@ export default async function AdminCountriesPage({ searchParams }: Props) {
     ? {
         OR: [
           { name: { contains: q } },
+          { nameEn: { contains: q } },
+          { nameRu: { contains: q } },
           { slug: { contains: q } },
           { code2: { contains: q } },
         ],
@@ -93,7 +95,8 @@ export default async function AdminCountriesPage({ searchParams }: Props) {
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead className="bg-muted/50 border-b">
             <tr>
-              <th className="p-2.5 font-medium">Name</th>
+              <th className="p-2.5 font-medium">Name (EN)</th>
+              <th className="p-2.5 font-medium">Name (RU)</th>
               <th className="p-2.5 font-medium">Slug</th>
               <th className="p-2.5 font-medium">ISO</th>
               <th className="p-2.5 font-medium">Cities</th>
@@ -110,9 +113,10 @@ export default async function AdminCountriesPage({ searchParams }: Props) {
                     href={`/admin/references/countries/${c.id}`}
                     className="text-primary hover:underline"
                   >
-                    {c.name}
+                    {c.nameEn ?? c.name}
                   </Link>
                 </td>
+                <td className="p-2.5">{c.nameRu ?? "—"}</td>
                 <td className="text-muted-foreground p-2.5 font-mono text-xs">
                   {c.slug}
                 </td>

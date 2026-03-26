@@ -50,7 +50,7 @@ export default async function AdminCityDetailPage({
   });
   if (!city) notFound();
 
-  const countries = await db.country.findMany({ orderBy: { name: "asc" } });
+  const countries = await db.country.findMany({ orderBy: { nameEn: "asc" } });
 
   const main = (
     <>
@@ -104,19 +104,29 @@ export default async function AdminCityDetailPage({
           >
             {countries.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {c.nameEn ?? c.name}
               </option>
             ))}
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="nameEn">Name (EN)</Label>
           <Input
-            id="name"
-            name="name"
+            id="nameEn"
+            name="nameEn"
             required
             maxLength={120}
-            defaultValue={city.name}
+            defaultValue={city.nameEn ?? city.name}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nameRu">Name (RU)</Label>
+          <Input
+            id="nameRu"
+            name="nameRu"
+            required
+            maxLength={120}
+            defaultValue={city.nameRu ?? ""}
           />
         </div>
         <div className="space-y-2">
@@ -154,7 +164,7 @@ export default async function AdminCityDetailPage({
         { label: "Slug", value: city.slug, mono: true },
         {
           label: "Country",
-          value: `${city.country.name} (${city.country.slug})`,
+          value: `${city.country.nameEn ?? city.country.name} (${city.country.slug})`,
         },
         {
           label: "Created",

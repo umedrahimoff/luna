@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import type { Event } from "@prisma/client";
+import { AppLanguage, type Event } from "@prisma/client";
 import { CheckCircle2, UserRoundPen } from "lucide-react";
 import {
   changePassword,
   deleteAccount,
   updateProfile,
+  updatePreferences,
   type ProfileActionState,
 } from "@/app/actions/profile";
+import { useI18n } from "@/components/i18n-provider";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EventCard } from "@/components/event-card";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -58,6 +60,7 @@ type Props = {
     bio: string | null;
     username: string | null;
     avatarUrl: string | null;
+    preferredLanguage: AppLanguage;
   };
   canDeleteAccount?: boolean;
   deleteBlockedReason?: string;
@@ -67,6 +70,7 @@ type Props = {
 const profileInitial: ProfileActionState = { ok: false };
 const passwordInitial: ProfileActionState = { ok: false };
 const deleteInitial: ProfileActionState = { ok: false };
+const prefsInitial: ProfileActionState = { ok: false };
 
 function fieldErr(
   fe: Record<string, string[] | undefined> | undefined,
@@ -81,6 +85,7 @@ export function MePageClient({
   deleteBlockedReason,
   events,
 }: Props) {
+  const t = useI18n();
   const router = useRouter();
   const sp = useSearchParams();
   const tabParam = sp.get("tab");
@@ -113,6 +118,7 @@ export function MePageClient({
   const profileFormRef = useRef<HTMLFormElement>(null);
   const passwordFormRef = useRef<HTMLFormElement>(null);
   const deleteFormRef = useRef<HTMLFormElement>(null);
+  const prefsFormRef = useRef<HTMLFormElement>(null);
 
   const [profileState, profileAction, profilePending] = useActionState(
     updateProfile,
@@ -126,12 +132,16 @@ export function MePageClient({
     deleteAccount,
     deleteInitial,
   );
+  const [prefsState, prefsAction, prefsPending] = useActionState(
+    updatePreferences,
+    prefsInitial,
+  );
 
   const [confirmProfile, setConfirmProfile] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState<AppLanguage>(user.preferredLanguage);
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -143,6 +153,11 @@ export function MePageClient({
   useEffect(() => {
     if (passwordState.ok) setConfirmPassword(false);
   }, [passwordState.ok]);
+  useEffect(() => {
+    if (prefsState.ok) {
+      router.refresh();
+    }
+  }, [prefsState.ok, router]);
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -164,10 +179,10 @@ export function MePageClient({
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-foreground text-xl font-semibold tracking-tight">
-          Profile
+          {t.profile.title}
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Manage how you appear as a host and your sign-in details.
+          {t.profile.subtitle}
         </p>
       </div>
 
@@ -188,7 +203,7 @@ export function MePageClient({
           )}
           onClick={() => setTab("account")}
         >
-          Account
+          {t.profile.tabs.account}
           {tab === "account" ? (
             <span className="bg-primary absolute inset-x-1 -bottom-px h-0.5 rounded-full" />
           ) : null}
@@ -205,7 +220,7 @@ export function MePageClient({
           )}
           onClick={() => setTab("events")}
         >
-          My events
+          {t.profile.tabs.events}
           {tab === "events" ? (
             <span className="bg-primary absolute inset-x-1 -bottom-px h-0.5 rounded-full" />
           ) : null}
@@ -222,7 +237,7 @@ export function MePageClient({
           )}
           onClick={() => setTab("settings")}
         >
-          Settings
+          {t.profile.tabs.settings}
           {tab === "settings" ? (
             <span className="bg-primary absolute inset-x-1 -bottom-px h-0.5 rounded-full" />
           ) : null}
@@ -233,20 +248,20 @@ export function MePageClient({
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <p className="text-muted-foreground text-sm">
-              Events you host (newest first in the list below).
+              {t.profile.eventsBlock.hostHint}
             </p>
             <Link
               href="/events/new"
               className={cn(buttonVariants({ size: "sm" }), "w-fit shrink-0")}
             >
-              New event
+              {t.profile.eventsBlock.newEvent}
             </Link>
           </div>
           {events.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              You have no events yet.{" "}
+              {t.profile.eventsBlock.empty}{" "}
               <Link href="/events/new" className="text-primary underline">
-                Create one
+                {t.profile.eventsBlock.createOne}
               </Link>
             </p>
           ) : (
@@ -268,7 +283,7 @@ export function MePageClient({
                       "w-fit",
                     )}
                   >
-                    Edit event
+                    {t.profile.eventsBlock.editEvent}
                   </Link>
                 </li>
               ))}
@@ -278,9 +293,9 @@ export function MePageClient({
       ) : tab === "settings" ? (
         <Card>
           <CardHeader className="border-border border-b p-4 sm:p-5">
-            <CardTitle>Display</CardTitle>
+            <CardTitle>{t.profile.settings.displayTitle}</CardTitle>
             <CardDescription>
-              Choose your desired Luna interface.
+              {t.profile.settings.displayHint}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 p-4 pt-4 sm:p-5">
@@ -318,32 +333,46 @@ export function MePageClient({
                 </div>
               ))}
             </div>
-            <div className="max-w-xs space-y-2">
-              <Label htmlFor="settings-language">Language</Label>
+            <form ref={prefsFormRef} action={prefsAction} className="max-w-xs space-y-2">
+              <Label htmlFor="settings-language">{t.profile.settings.language}</Label>
               <select
                 id="settings-language"
+                name="preferredLanguage"
                 value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                disabled
+                onChange={(e) => setLanguage(e.target.value as AppLanguage)}
                 className={cn(
-                  "border-input bg-background min-h-10 w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none disabled:cursor-not-allowed disabled:opacity-60",
+                  "border-input bg-background min-h-10 w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none",
                   "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
                 )}
               >
-                <option value="en">English</option>
+                <option value={AppLanguage.EN}>English</option>
+                <option value={AppLanguage.RU}>Русский</option>
               </select>
-              <p className="text-muted-foreground text-xs">More languages soon.</p>
-            </div>
+              {prefsState.message ? (
+                <p
+                  className={cn(
+                    "text-sm",
+                    prefsState.ok ? "text-primary font-medium" : "text-destructive",
+                  )}
+                >
+                  {prefsState.ok
+                    ? t.profile.settings.saved
+                    : prefsState.message}
+                </p>
+              ) : null}
+              <Button type="submit" variant="secondary" disabled={prefsPending}>
+                {prefsPending ? t.profile.account.saving : t.profile.settings.saveLanguage}
+              </Button>
+            </form>
           </CardContent>
         </Card>
       ) : (
         <div className="flex flex-col gap-4">
           <Card>
             <CardHeader className="border-border border-b p-4 sm:p-5">
-              <CardTitle>Your profile</CardTitle>
+              <CardTitle>{t.profile.account.cardTitle}</CardTitle>
               <CardDescription>
-                Choose how you are displayed as a host or guest. Add a username
-                to publish at{" "}
+                {t.profile.account.cardHint}{" "}
                 <span className="text-foreground font-mono text-[0.8rem]">
                   /u/yourname
                 </span>
@@ -357,7 +386,7 @@ export function MePageClient({
                     href={`/u/${user.username}`}
                     className="text-primary font-medium underline underline-offset-4"
                   >
-                    View public profile
+                    {t.profile.account.viewPublic}
                   </Link>
                 </p>
               ) : null}
@@ -370,7 +399,7 @@ export function MePageClient({
                 <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-6">
                   <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="profile-first-name">First name</Label>
+                      <Label htmlFor="profile-first-name">{t.profile.account.firstName}</Label>
                       <Input
                         id="profile-first-name"
                         name="firstName"
@@ -390,7 +419,7 @@ export function MePageClient({
                       ) : null}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="profile-last-name">Last name</Label>
+                      <Label htmlFor="profile-last-name">{t.profile.account.lastName}</Label>
                       <Input
                         id="profile-last-name"
                         name="lastName"
@@ -409,7 +438,7 @@ export function MePageClient({
                       ) : null}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="profile-username">Username</Label>
+                      <Label htmlFor="profile-username">{t.profile.account.username}</Label>
                       <div className="flex min-w-0 rounded-lg border border-input shadow-xs focus-within:ring-[3px] focus-within:ring-ring/50">
                         <span className="text-muted-foreground border-input bg-muted/50 flex shrink-0 items-center border-r px-3 text-sm">
                           @
@@ -433,12 +462,12 @@ export function MePageClient({
                         </p>
                       ) : (
                         <p className="text-muted-foreground text-xs">
-                          3–30 chars: lowercase letters, numbers, underscores.
+                          {t.profile.account.usernameHint}
                         </p>
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="profile-email">Email</Label>
+                      <Label htmlFor="profile-email">{t.profile.account.email}</Label>
                       <Input
                         id="profile-email"
                         name="email"
@@ -457,7 +486,7 @@ export function MePageClient({
                         </p>
                       ) : (
                         <p className="text-muted-foreground text-xs">
-                          Used for sign-in and event notifications.
+                          {t.profile.account.emailHint}
                         </p>
                       )}
                     </div>
@@ -470,13 +499,13 @@ export function MePageClient({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="profile-bio">Bio</Label>
+                  <Label htmlFor="profile-bio">{t.profile.account.bio}</Label>
                   <Textarea
                     id="profile-bio"
                     name="bio"
                     rows={4}
                     maxLength={2000}
-                    placeholder="Share a little about your background and interests."
+                    placeholder={t.profile.account.bioPlaceholder}
                     defaultValue={user.bio ?? ""}
                     className="min-h-[100px] resize-y"
                     aria-invalid={!!fieldErr(profileState.fieldErrors, "bio")}
@@ -507,7 +536,7 @@ export function MePageClient({
                     onClick={() => setConfirmProfile(true)}
                   >
                     <UserRoundPen className="size-4" aria-hidden />
-                    {profilePending ? "Saving…" : "Save changes"}
+                    {profilePending ? t.profile.account.saving : t.profile.account.saveChanges}
                   </Button>
                 </div>
               </form>
@@ -516,10 +545,9 @@ export function MePageClient({
 
           <Card>
             <CardHeader className="border-border border-b p-4 sm:p-5">
-              <CardTitle>Security</CardTitle>
+              <CardTitle>{t.profile.security.title}</CardTitle>
               <CardDescription>
-                For your security, use a strong password you do not reuse
-                elsewhere.
+                {t.profile.security.hint}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 pt-4 sm:p-5">
@@ -529,7 +557,7 @@ export function MePageClient({
                 className="flex max-w-md flex-col gap-3"
               >
                 <div className="space-y-2">
-                  <Label htmlFor="current-pw">Current password</Label>
+                  <Label htmlFor="current-pw">{t.profile.security.currentPassword}</Label>
                   <Input
                     id="current-pw"
                     name="currentPassword"
@@ -546,7 +574,7 @@ export function MePageClient({
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="new-pw">New password</Label>
+                  <Label htmlFor="new-pw">{t.profile.security.newPassword}</Label>
                   <Input
                     id="new-pw"
                     name="newPassword"
@@ -564,7 +592,7 @@ export function MePageClient({
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-pw">Confirm new password</Label>
+                  <Label htmlFor="confirm-pw">{t.profile.security.confirmNewPassword}</Label>
                   <Input
                     id="confirm-pw"
                     name="confirmPassword"
@@ -599,7 +627,7 @@ export function MePageClient({
                     disabled={passwordPending}
                     onClick={() => setConfirmPassword(true)}
                   >
-                    {passwordPending ? "Updating…" : "Update password"}
+                    {passwordPending ? t.profile.security.updating : t.profile.security.updatePassword}
                   </Button>
                 </div>
               </form>
@@ -608,10 +636,9 @@ export function MePageClient({
 
           <Card className="border-destructive/40 ring-destructive/20">
             <CardHeader className="border-border border-b p-4 sm:p-5">
-              <CardTitle className="text-destructive">Delete account</CardTitle>
+              <CardTitle className="text-destructive">{t.profile.delete.title}</CardTitle>
               <CardDescription>
-                Permanently remove your account and all events you host. This
-                cannot be undone.
+                {t.profile.delete.hint}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 pt-4 sm:p-5">
@@ -621,7 +648,7 @@ export function MePageClient({
                 className="flex max-w-md flex-col gap-3"
               >
                 <div className="space-y-2">
-                  <Label htmlFor="delete-pw">Password</Label>
+                  <Label htmlFor="delete-pw">{t.profile.delete.password}</Label>
                   <Input
                     id="delete-pw"
                     name="password"
@@ -639,9 +666,9 @@ export function MePageClient({
                   ) : (
                     <p className="text-muted-foreground text-xs">
                       {canDeleteAccount
-                        ? "Enter your password to confirm you own this account."
+                        ? t.profile.delete.ownAccountHint
                         : (deleteBlockedReason ??
-                          "This account is protected and cannot be deleted.")}
+                          t.profile.delete.protectedHint)}
                     </p>
                   )}
                 </div>
@@ -655,7 +682,7 @@ export function MePageClient({
                 disabled={deletePending || !canDeleteAccount}
                 onClick={() => setConfirmDelete(true)}
               >
-                Delete my account
+                {t.profile.delete.deleteButton}
               </Button>
             </CardFooter>
           </Card>
@@ -665,9 +692,9 @@ export function MePageClient({
       <ConfirmDialog
         open={confirmProfile}
         onOpenChange={setConfirmProfile}
-        title="Save profile?"
-        description="Your display name, email, and bio will be updated."
-        confirmLabel="Save"
+        title={t.profile.delete.confirmProfileTitle}
+        description={t.profile.delete.confirmProfileDescription}
+        confirmLabel={t.profile.delete.confirmSave}
         pending={profilePending}
         onConfirm={() => {
           if (!profileFormRef.current) return;
@@ -678,9 +705,9 @@ export function MePageClient({
       <ConfirmDialog
         open={confirmPassword}
         onOpenChange={setConfirmPassword}
-        title="Update password?"
-        description="You will use the new password the next time you sign in."
-        confirmLabel="Update password"
+        title={t.profile.delete.confirmPasswordTitle}
+        description={t.profile.delete.confirmPasswordDescription}
+        confirmLabel={t.profile.delete.confirmPasswordLabel}
         pending={passwordPending}
         onConfirm={() => {
           if (!passwordFormRef.current) return;
@@ -692,9 +719,9 @@ export function MePageClient({
         open={canDeleteAccount ? confirmDelete : false}
         onOpenChange={setConfirmDelete}
         variant="destructive"
-        title="Delete your account?"
-        description="All events you created will be removed. Registrations for those events will be deleted. This action is permanent."
-        confirmLabel="Delete account"
+        title={t.profile.delete.confirmDeleteTitle}
+        description={t.profile.delete.confirmDeleteDescription}
+        confirmLabel={t.profile.delete.confirmDeleteLabel}
         pending={deletePending}
         onConfirm={() => {
           if (!deleteFormRef.current) return;

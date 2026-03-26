@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/components/i18n-provider";
 import { LUNA_TELEGRAM_BOT_URL } from "@/lib/telegram-constants";
 
 const initial: TelegramAuthState = { ok: false };
@@ -21,17 +22,14 @@ function fieldErr(
 }
 
 export function TelegramRegisterForm() {
+  const t = useI18n();
   const action = useMemo(() => registerWithTelegram, []);
   const [state, formAction, pending] = useActionState(action, initial);
 
   return (
     <form action={formAction} className="flex w-full min-w-0 flex-col gap-4">
       <p className="text-muted-foreground text-sm leading-relaxed">
-        Send{" "}
-        <code className="text-foreground bg-muted rounded px-1 py-0.5 text-xs">
-          /start
-        </code>{" "}
-        to bot{" "}
+        {t.telegram.registerHint}{" "}
         <a
           href={LUNA_TELEGRAM_BOT_URL}
           target="_blank"
@@ -39,12 +37,11 @@ export function TelegramRegisterForm() {
           className="text-primary font-medium underline underline-offset-4"
         >
           @getlunabot
-        </a>{" "}
-        in Telegram, get a code, then enter it below.
+        </a>
       </p>
 
       <div className="space-y-2">
-        <Label htmlFor="tg-reg-code">Telegram code</Label>
+        <Label htmlFor="tg-reg-code">{t.telegram.telegramCode}</Label>
         <Input
           id="tg-reg-code"
           name="code"
@@ -62,7 +59,7 @@ export function TelegramRegisterForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="tg-reg-login">Login</Label>
+        <Label htmlFor="tg-reg-login">{t.telegram.login}</Label>
         <Input
           id="tg-reg-login"
           name="loginSlug"
@@ -78,14 +75,14 @@ export function TelegramRegisterForm() {
           </p>
         ) : (
           <p className="text-muted-foreground text-xs">
-            Latin letters, numbers, and underscore, 3-30 chars.
+            {t.telegram.usernameRule}
           </p>
         )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="tg-reg-fn">First name</Label>
+          <Label htmlFor="tg-reg-fn">{t.auth.firstName}</Label>
           <Input
             id="tg-reg-fn"
             name="firstName"
@@ -102,7 +99,7 @@ export function TelegramRegisterForm() {
           ) : null}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="tg-reg-ln">Last name</Label>
+          <Label htmlFor="tg-reg-ln">{t.auth.lastName}</Label>
           <Input
             id="tg-reg-ln"
             name="lastName"
@@ -124,13 +121,13 @@ export function TelegramRegisterForm() {
       ) : null}
 
       <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Signing up…" : "Sign up"}
+        {pending ? t.telegram.signingUp : t.auth.signUpTitle}
       </Button>
 
       <p className="text-muted-foreground text-center text-sm">
-        Already have an account?{" "}
+        {t.auth.hasAccount}{" "}
         <Link href="/login" className="text-primary font-medium underline">
-          Sign in
+          {t.auth.signInLink}
         </Link>
       </p>
     </form>

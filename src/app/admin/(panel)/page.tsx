@@ -92,6 +92,7 @@ export default async function AdminHomePage({ searchParams }: Props) {
                       {ev.startsAt.toLocaleString("en-US", {
                         dateStyle: "short",
                         timeStyle: "short",
+                        hour12: false,
                       })}
                     </span>
                   </li>

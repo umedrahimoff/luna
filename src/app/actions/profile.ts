@@ -4,11 +4,12 @@ import { mkdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
-import { UserRole } from "@prisma/client";
+import { AppLanguage, UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   changePasswordSchema,
   deleteAccountSchema,
+  updatePreferencesSchema,
   updateProfileSchema,
 } from "@/lib/schemas/profile";
 import { joinDisplayName } from "@/lib/display-name";
@@ -220,6 +221,27 @@ export async function changePassword(
   });
 
   return { ok: true, message: "Password updated." };
+}
+
+export async function updatePreferences(
+  _prev: ProfileActionState | undefined,
+  formData: FormData,
+): Promise<ProfileActionState> {
+  const session = await requireUser();
+  const parsed = updatePreferencesSchema.safeParse({
+    preferredLanguage: String(formData.get("preferredLanguage") ?? AppLanguage.EN),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+  await db.user.update({
+    where: { id: session.id },
+    data: { preferredLanguage: parsed.data.preferredLanguage },
+  });
+  return { ok: true, message: "Preferences saved." };
 }
 
 export async function deleteAccount(

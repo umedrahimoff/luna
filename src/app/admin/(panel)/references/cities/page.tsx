@@ -33,15 +33,19 @@ export default async function AdminCitiesPage({ searchParams }: Props) {
     ? {
         OR: [
           { name: { contains: q } },
+          { nameEn: { contains: q } },
+          { nameRu: { contains: q } },
           { slug: { contains: q } },
           { country: { name: { contains: q } } },
+          { country: { nameEn: { contains: q } } },
+          { country: { nameRu: { contains: q } } },
         ],
       }
     : undefined;
 
   const cities = await db.city.findMany({
     where,
-    orderBy: [{ country: { name: "asc" } }, { name: "asc" }],
+    orderBy: [{ country: { nameEn: "asc" } }, { nameEn: "asc" }],
     include: { country: true },
   });
 
@@ -96,9 +100,10 @@ export default async function AdminCitiesPage({ searchParams }: Props) {
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead className="bg-muted/50 border-b">
             <tr>
-              <th className="p-2.5 font-medium">City</th>
+              <th className="p-2.5 font-medium">City (EN)</th>
+              <th className="p-2.5 font-medium">City (RU)</th>
               <th className="p-2.5 font-medium">Slug</th>
-              <th className="p-2.5 font-medium">Country</th>
+              <th className="p-2.5 font-medium">Country (EN)</th>
               <th className="text-muted-foreground min-w-[5rem] whitespace-nowrap p-2.5 text-right text-xs font-medium uppercase tracking-wide">
                 Actions
               </th>
@@ -112,9 +117,10 @@ export default async function AdminCitiesPage({ searchParams }: Props) {
                     href={`/admin/references/cities/${city.id}`}
                     className="text-primary hover:underline"
                   >
-                    {city.name}
+                    {city.nameEn ?? city.name}
                   </Link>
                 </td>
+                <td className="p-2.5">{city.nameRu ?? "—"}</td>
                 <td className="text-muted-foreground p-2.5 font-mono text-xs">
                   {city.slug}
                 </td>
@@ -123,7 +129,7 @@ export default async function AdminCitiesPage({ searchParams }: Props) {
                     href={`/admin/references/countries/${city.countryId}`}
                     className="text-primary hover:underline"
                   >
-                    {city.country.name}
+                    {city.country.nameEn ?? city.country.name}
                   </Link>
                 </td>
                 <td className="p-2.5 text-right whitespace-nowrap">

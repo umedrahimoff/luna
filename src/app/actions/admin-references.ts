@@ -57,13 +57,15 @@ function normalizeCode2(raw: string): string | null {
 
 export async function adminCreateCountry(formData: FormData): Promise<void> {
   await requireStaff();
-  const name = String(formData.get("name") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim();
+  const nameRu = String(formData.get("nameRu") ?? "").trim();
   const slugInput = String(formData.get("slug") ?? "").trim();
   const code2Raw = String(formData.get("code2") ?? "").trim();
-  if (!name || name.length > 120) {
-    countryCreateError("Name must be 120 characters or less");
+  if (!nameEn || !nameRu || nameEn.length > 120 || nameRu.length > 120) {
+    countryCreateError("Name EN and Name RU must be non-empty and <= 120");
   }
-  let slug = slugInput ? slugify(slugInput) : slugify(name);
+  const name = nameEn;
+  let slug = slugInput ? slugify(slugInput) : slugify(nameEn);
   if (!slug) slug = "country";
   const code2 = normalizeCode2(code2Raw);
   if (code2 === "__invalid__") {
@@ -79,7 +81,7 @@ export async function adminCreateCountry(formData: FormData): Promise<void> {
   }
   try {
     await db.country.create({
-      data: { name, slug, code2 },
+      data: { name, nameEn, nameRu, slug, code2 },
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -99,13 +101,15 @@ export async function adminUpdateCountry(
   await requireStaff();
   const countryId = parseRecordId(countryIdRaw);
   if (countryId == null) countryErrList("Invalid id");
-  const name = String(formData.get("name") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim();
+  const nameRu = String(formData.get("nameRu") ?? "").trim();
   const slugInput = String(formData.get("slug") ?? "").trim();
   const code2Raw = String(formData.get("code2") ?? "").trim();
-  if (!name || name.length > 120) {
-    countryErrDetail(countryId, "Name must be 120 characters or less");
+  if (!nameEn || !nameRu || nameEn.length > 120 || nameRu.length > 120) {
+    countryErrDetail(countryId, "Name EN and Name RU must be non-empty and <= 120");
   }
-  let slug = slugInput ? slugify(slugInput) : slugify(name);
+  const name = nameEn;
+  let slug = slugInput ? slugify(slugInput) : slugify(nameEn);
   if (!slug) slug = "country";
   const code2 = normalizeCode2(code2Raw);
   if (code2 === "__invalid__") {
@@ -126,7 +130,7 @@ export async function adminUpdateCountry(
   try {
     await db.country.update({
       where: { id: countryId },
-      data: { name, slug, code2 },
+      data: { name, nameEn, nameRu, slug, code2 },
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -177,15 +181,17 @@ export async function adminCreateCity(formData: FormData): Promise<void> {
   const countryId = parseRecordId(
     String(formData.get("countryId") ?? "").trim(),
   );
-  const name = String(formData.get("name") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim();
+  const nameRu = String(formData.get("nameRu") ?? "").trim();
   const slugInput = String(formData.get("slug") ?? "").trim();
   if (countryId == null) cityCreateError("Select a country");
-  if (!name || name.length > 120) {
-    cityCreateError("City name must be 120 characters or less");
+  if (!nameEn || !nameRu || nameEn.length > 120 || nameRu.length > 120) {
+    cityCreateError("City Name EN and Name RU must be non-empty and <= 120");
   }
   const country = await db.country.findUnique({ where: { id: countryId } });
   if (!country) cityCreateError("Country not found");
-  let slug = slugInput ? slugify(slugInput) : slugify(name);
+  const name = nameEn;
+  let slug = slugInput ? slugify(slugInput) : slugify(nameEn);
   if (!slug) slug = "city";
   const dup = await db.city.findUnique({
     where: { countryId_slug: { countryId, slug } },
@@ -195,7 +201,7 @@ export async function adminCreateCity(formData: FormData): Promise<void> {
   }
   try {
     await db.city.create({
-      data: { name, slug, countryId },
+      data: { name, nameEn, nameRu, slug, countryId },
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -219,17 +225,19 @@ export async function adminUpdateCity(
   const countryId = parseRecordId(
     String(formData.get("countryId") ?? "").trim(),
   );
-  const name = String(formData.get("name") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim();
+  const nameRu = String(formData.get("nameRu") ?? "").trim();
   const slugInput = String(formData.get("slug") ?? "").trim();
   if (countryId == null) {
     cityErrDetail(cityId, "Select a country");
   }
-  if (!name || name.length > 120) {
-    cityErrDetail(cityId, "Name must be 120 characters or less");
+  if (!nameEn || !nameRu || nameEn.length > 120 || nameRu.length > 120) {
+    cityErrDetail(cityId, "Name EN and Name RU must be non-empty and <= 120");
   }
   const country = await db.country.findUnique({ where: { id: countryId } });
   if (!country) cityErrDetail(cityId, "Country not found");
-  let slug = slugInput ? slugify(slugInput) : slugify(name);
+  const name = nameEn;
+  let slug = slugInput ? slugify(slugInput) : slugify(nameEn);
   if (!slug) slug = "city";
   const dup = await db.city.findFirst({
     where: {
@@ -244,7 +252,7 @@ export async function adminUpdateCity(
   try {
     await db.city.update({
       where: { id: cityId },
-      data: { name, slug, countryId },
+      data: { name, nameEn, nameRu, slug, countryId },
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -270,17 +278,19 @@ export async function adminDeleteCity(cityIdRaw: string | number): Promise<void>
 
 export async function adminCreateCategory(formData: FormData): Promise<void> {
   await requireStaff();
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name || name.length > 80) {
-    categoryCreateError("Name must be 80 characters or less");
+  const nameEn = String(formData.get("nameEn") ?? "").trim();
+  const nameRu = String(formData.get("nameRu") ?? "").trim();
+  if (!nameEn || !nameRu || nameEn.length > 80 || nameRu.length > 80) {
+    categoryCreateError("Name EN and Name RU must be non-empty and <= 80");
   }
-  let slug = slugify(name);
+  const name = nameEn;
+  let slug = slugify(nameEn);
   const exists = await db.category.findUnique({ where: { slug } });
   if (exists) {
     slug = `${slug}-${Date.now().toString(36)}`;
   }
   try {
-    await db.category.create({ data: { name, slug } });
+    await db.category.create({ data: { name, nameEn, nameRu, slug } });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       categoryCreateError("This slug is already taken");
@@ -336,12 +346,14 @@ export async function adminUpdateCategory(
   await requireStaff();
   const categoryId = parseRecordId(categoryIdRaw);
   if (categoryId == null) categoryErrList("Invalid id");
-  const name = String(formData.get("name") ?? "").trim();
+  const nameEn = String(formData.get("nameEn") ?? "").trim();
+  const nameRu = String(formData.get("nameRu") ?? "").trim();
   const slugInput = String(formData.get("slug") ?? "").trim();
-  if (!name || name.length > 80) {
-    categoryErrDetail(categoryId, "Name must be 80 characters or less");
+  if (!nameEn || !nameRu || nameEn.length > 80 || nameRu.length > 80) {
+    categoryErrDetail(categoryId, "Name EN and Name RU must be non-empty and <= 80");
   }
-  let slug = slugInput ? slugify(slugInput) : slugify(name);
+  const name = nameEn;
+  let slug = slugInput ? slugify(slugInput) : slugify(nameEn);
   if (!slug) slug = "category";
   const taken = await db.category.findFirst({
     where: { slug, NOT: { id: categoryId } },
@@ -351,7 +363,7 @@ export async function adminUpdateCategory(
   }
   await db.category.update({
     where: { id: categoryId },
-    data: { name, slug },
+    data: { name, nameEn, nameRu, slug },
   });
   revalidatePath("/");
   revalidatePath("/admin/references/categories");

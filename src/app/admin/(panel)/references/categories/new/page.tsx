@@ -53,13 +53,23 @@ export default async function AdminNewCategoryPage({ searchParams }: Props) {
         className={adminDetailFormCardClass}
       >
         <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="nameEn">Name (EN)</Label>
           <Input
-            id="name"
-            name="name"
+            id="nameEn"
+            name="nameEn"
             required
             maxLength={80}
             placeholder="e.g. Meetups"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nameRu">Name (RU)</Label>
+          <Input
+            id="nameRu"
+            name="nameRu"
+            required
+            maxLength={80}
+            placeholder="например, Митапы"
           />
         </div>
         <Button type="submit" className="w-full sm:w-auto">

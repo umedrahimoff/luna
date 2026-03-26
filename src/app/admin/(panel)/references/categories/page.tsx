@@ -21,6 +21,8 @@ export default async function AdminCategoriesPage({ searchParams }: Props) {
     ? {
         OR: [
           { name: { contains: q } },
+          { nameEn: { contains: q } },
+          { nameRu: { contains: q } },
           { slug: { contains: q } },
         ],
       }
@@ -89,7 +91,8 @@ export default async function AdminCategoriesPage({ searchParams }: Props) {
         <table className="w-full min-w-[480px] text-left text-sm">
           <thead className="bg-muted/50 border-b">
             <tr>
-              <th className="p-2.5 font-medium">Name</th>
+              <th className="p-2.5 font-medium">Name (EN)</th>
+              <th className="p-2.5 font-medium">Name (RU)</th>
               <th className="p-2.5 font-medium">Slug</th>
               <th className="p-2.5 font-medium">Events</th>
               <th className="text-muted-foreground min-w-[5rem] whitespace-nowrap p-2.5 text-right text-xs font-medium uppercase tracking-wide">
@@ -105,9 +108,10 @@ export default async function AdminCategoriesPage({ searchParams }: Props) {
                     href={`/admin/references/categories/${c.id}`}
                     className="text-primary hover:underline"
                   >
-                    {c.name}
+                    {c.nameEn ?? c.name}
                   </Link>
                 </td>
+                <td className="p-2.5">{c.nameRu ?? "—"}</td>
                 <td className="text-muted-foreground p-2.5 font-mono text-xs">
                   {c.slug}
                 </td>

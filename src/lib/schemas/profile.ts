@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AppLanguage } from "@prisma/client";
 
 export const updateProfileSchema = z.object({
   firstName: z.string().trim().min(1, "Enter your first name").max(60),
@@ -31,4 +32,8 @@ export const changePasswordSchema = z
 
 export const deleteAccountSchema = z.object({
   password: z.string().min(1, "Enter your password to confirm"),
+});
+
+export const updatePreferencesSchema = z.object({
+  preferredLanguage: z.nativeEnum(AppLanguage),
 });

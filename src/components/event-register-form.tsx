@@ -6,6 +6,7 @@ import type { ActionState } from "@/app/actions/events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
 const initial: ActionState = { ok: false };
@@ -32,16 +33,21 @@ type Props = {
   }>;
 };
 
-function formatStartsIn(startsAtIso?: string): string | null {
+function formatStartsIn(
+  startsAtIso: string | undefined,
+  labels: { started: string; hours: string; daysHours: string },
+): string | null {
   if (!startsAtIso) return null;
   const start = new Date(startsAtIso);
   const diff = start.getTime() - Date.now();
-  if (Number.isNaN(start.getTime()) || diff <= 0) return "Started";
+  if (Number.isNaN(start.getTime()) || diff <= 0) return labels.started;
   const totalHours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(totalHours / 24);
   const hours = totalHours % 24;
-  if (days <= 0) return `Starting in ${hours}h`;
-  return `Starting in ${days}d ${hours}h`;
+  if (days <= 0) return labels.hours.replace("{hours}", String(hours));
+  return labels.daysHours
+    .replace("{days}", String(days))
+    .replace("{hours}", String(hours));
 }
 
 function toGoogleCalendarUrl(params: {
@@ -79,6 +85,7 @@ export function EventRegisterForm({
   eventUrl,
   questions = [],
 }: Props) {
+  const t = useI18n();
   const [open, setOpen] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const action = useMemo(
@@ -86,7 +93,11 @@ export function EventRegisterForm({
     [eventId],
   );
   const [state, formAction, pending] = useActionState(action, initial);
-  const startsIn = formatStartsIn(startsAtIso);
+  const startsIn = formatStartsIn(startsAtIso, {
+    started: t.registerBlock.started,
+    hours: t.registerBlock.startingInHours,
+    daysHours: t.registerBlock.startingInDaysHours,
+  });
   const calUrl = toGoogleCalendarUrl({
     title: eventTitle,
     startsAtIso,
@@ -103,8 +114,8 @@ export function EventRegisterForm({
         ? eventUrl
         : `${window.location.origin}${eventUrl.startsWith("/") ? eventUrl : `/${eventUrl}`}`;
     const shareData = {
-      title: eventTitle ?? "Luna event",
-      text: `Join me at ${eventTitle ?? "this event"} on Luna`,
+      title: eventTitle ?? t.registerBlock.lunaEvent,
+      text: t.registerBlock.joinMeAt.replace("{event}", eventTitle ?? t.registerBlock.lunaEvent),
       url: normalizedUrl,
     };
     try {
@@ -115,12 +126,12 @@ export function EventRegisterForm({
       }
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(normalizedUrl);
-        setShareFeedback("Event link copied");
+        setShareFeedback(t.registerBlock.linkCopied);
         return;
       }
-      setShareFeedback("Sharing is not supported on this device");
+      setShareFeedback(t.registerBlock.shareNotSupported);
     } catch {
-      setShareFeedback("Could not share right now");
+      setShareFeedback(t.registerBlock.shareFailed);
     }
   };
 
@@ -134,7 +145,7 @@ export function EventRegisterForm({
     return (
       <div className="border-border bg-card rounded-2xl border p-4 sm:p-5">
         <p className="text-muted-foreground text-sm">
-          Registration closed: capacity reached.
+          {t.registerBlock.closed}
         </p>
       </div>
     );
@@ -144,7 +155,7 @@ export function EventRegisterForm({
     return (
       <div className="border-border bg-card rounded-2xl border p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <h3 className="text-base font-semibold tracking-tight">You&apos;re in</h3>
+          <h3 className="text-base font-semibold tracking-tight">{t.registerBlock.youreIn}</h3>
           {startsIn ? (
             <span className="bg-muted text-muted-foreground rounded-full px-3 py-1 text-xs font-medium">
               {startsIn}
@@ -161,7 +172,7 @@ export function EventRegisterForm({
                 "border-input bg-background hover:bg-accent inline-flex items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
               )}
             >
-              Add to Calendar
+              {t.registerBlock.addToCalendar}
             </a>
           ) : null}
           {eventUrl ? (
@@ -172,12 +183,12 @@ export function EventRegisterForm({
                 "border-input bg-background hover:bg-accent inline-flex items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
               )}
             >
-              Invite a Friend
+              {t.registerBlock.inviteFriend}
             </button>
           ) : null}
         </div>
         <p className="text-muted-foreground mt-3 text-sm">
-          You are already registered for this event.
+          {t.registerBlock.alreadyRegistered}
         </p>
         {shareFeedback ? (
           <p className="text-muted-foreground mt-1 text-xs">{shareFeedback}</p>
@@ -192,10 +203,10 @@ export function EventRegisterForm({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold tracking-tight sm:text-base">
-              Event Registration
+              {t.registerBlock.title}
             </h3>
             <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-              Open the form and submit your details to request joining this event.
+              {t.registerBlock.hint}
             </p>
           </div>
           <Button
@@ -203,7 +214,7 @@ export function EventRegisterForm({
             onClick={() => setOpen(true)}
             className="w-full sm:w-auto"
           >
-            Request to Join
+            {t.registerBlock.requestToJoin}
           </Button>
         </div>
 
@@ -230,23 +241,23 @@ export function EventRegisterForm({
           >
             <div>
               <h4 className="text-base font-semibold tracking-tight">
-                Registration
+                {t.registerBlock.modalTitle}
               </h4>
               <p className="text-muted-foreground mt-1 text-sm">
-                Fill in required fields and send your request.
+                {t.registerBlock.modalHint}
               </p>
             </div>
 
             <form action={formAction} className="flex flex-col gap-3">
               {isAuthenticated ? (
                 <div className="bg-muted/50 rounded-xl border px-3 py-2.5 text-sm">
-                  <p className="font-medium">{profileName || "Your account"}</p>
-                  <p className="text-muted-foreground">{profileEmail || "Signed in"}</p>
+                  <p className="font-medium">{profileName || t.registerBlock.yourAccount}</p>
+                  <p className="text-muted-foreground">{profileEmail || t.registerBlock.signedIn}</p>
                 </div>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor={`ev-reg-name-${eventId}`}>Name</Label>
+                    <Label htmlFor={`ev-reg-name-${eventId}`}>{t.registerBlock.name}</Label>
                     <Input
                       id={`ev-reg-name-${eventId}`}
                       name="name"
@@ -260,7 +271,7 @@ export function EventRegisterForm({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor={`ev-reg-email-${eventId}`}>Email</Label>
+                    <Label htmlFor={`ev-reg-email-${eventId}`}>{t.registerBlock.email}</Label>
                     <Input
                       id={`ev-reg-email-${eventId}`}
                       name="email"
@@ -290,7 +301,7 @@ export function EventRegisterForm({
                       required={q.required}
                       className="border-input bg-background min-h-10 w-full rounded-lg border px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
                     >
-                      <option value="">Select an option</option>
+                      <option value="">{t.registerBlock.selectOption}</option>
                       {Array.isArray(q.optionsJson)
                         ? q.optionsJson.map((opt, idx) => (
                             <option key={`${q.id}-${idx}`} value={String(opt)}>
@@ -308,7 +319,7 @@ export function EventRegisterForm({
                         required={q.required}
                         className="size-4"
                       />
-                      I agree
+                      {t.registerBlock.iAgree}
                     </label>
                   ) : (
                     <Input
@@ -353,10 +364,10 @@ export function EventRegisterForm({
                   disabled={pending}
                   onClick={() => setOpen(false)}
                 >
-                  Cancel
+                  {t.registerBlock.cancel}
                 </Button>
                 <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-                  {pending ? "Submitting..." : "Request to Join"}
+                  {pending ? t.registerBlock.submitting : t.registerBlock.requestToJoin}
                 </Button>
               </div>
             </form>

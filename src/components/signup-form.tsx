@@ -9,7 +9,17 @@ import { Label } from "@/components/ui/label";
 
 const initial: AuthState = { ok: false };
 
-export function SignupForm() {
+type I18nAuth = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  minPassword: string;
+  creatingAccount: string;
+  signUpTitle?: string;
+};
+
+export function SignupForm({ t }: { t: I18nAuth }) {
   const action = useMemo(() => registerUser, []);
   const [state, formAction, pending] = useActionState(action, initial);
 
@@ -25,7 +35,7 @@ export function SignupForm() {
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="reg-fn">First name</Label>
+          <Label htmlFor="reg-fn">{t.firstName}</Label>
           <Input
             id="reg-fn"
             name="firstName"
@@ -35,7 +45,7 @@ export function SignupForm() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="reg-ln">Last name</Label>
+          <Label htmlFor="reg-ln">{t.lastName}</Label>
           <Input
             id="reg-ln"
             name="lastName"
@@ -45,7 +55,7 @@ export function SignupForm() {
         </div>
       </div>
       <div className="w-full space-y-2">
-        <Label htmlFor="reg-email">Email</Label>
+        <Label htmlFor="reg-email">{t.email}</Label>
         <Input
           id="reg-email"
           name="email"
@@ -55,7 +65,7 @@ export function SignupForm() {
         />
       </div>
       <div className="w-full space-y-2">
-        <Label htmlFor="reg-password">Password</Label>
+        <Label htmlFor="reg-password">{t.password}</Label>
         <Input
           id="reg-password"
           name="password"
@@ -64,13 +74,13 @@ export function SignupForm() {
           minLength={8}
           autoComplete="new-password"
         />
-        <p className="text-muted-foreground text-xs">Minimum 8 characters</p>
+        <p className="text-muted-foreground text-xs">{t.minPassword}</p>
       </div>
       {state.message && (
         <p className="text-destructive text-sm">{state.message}</p>
       )}
       <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Creating account…" : "Sign up"}
+        {pending ? t.creatingAccount : (t.signUpTitle ?? "Sign up")}
       </Button>
     </form>
   );

@@ -2,11 +2,14 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { EventCard } from "@/components/event-card";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { getUserLanguage } from "@/lib/i18n/server";
+import { localizedName } from "@/lib/localized-name";
 import { cn } from "@/lib/utils";
 
 type Props = {
   categorySlug?: string;
-  /** Base path for category chips, e.g. `/` or `/discover`. */
+  /** Base path for category chips, e.g. `/` or `/events`. */
   listBasePath: string;
   /**
    * When set, only events where this email has a registration (matched case-insensitively).
@@ -20,9 +23,14 @@ export async function PublicEventList({
   listBasePath,
   registeredEmail,
 }: Props) {
-  const categories = await db.category.findMany({
-    orderBy: { name: "asc" },
-  });
+  const [language, categories] = await Promise.all([
+    getUserLanguage(),
+    db.category.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, slug: true, name: true, nameEn: true, nameRu: true },
+    }),
+  ]);
+  const t = getDictionary(language);
 
   const emailNorm = registeredEmail?.trim().toLowerCase();
 
@@ -40,7 +48,7 @@ export async function PublicEventList({
     orderBy: { startsAt: "asc" },
     include: {
       _count: { select: { registrations: true } },
-      category: { select: { name: true } },
+      category: { select: { name: true, nameEn: true, nameRu: true } },
     },
   });
 
@@ -64,7 +72,7 @@ export async function PublicEventList({
               }),
             )}
           >
-            All
+            {t.eventList.all}
           </Link>
           {categories.map((c) => (
             <Link
@@ -78,7 +86,7 @@ export async function PublicEventList({
                 }),
               )}
             >
-              {c.name}
+              {localizedName(c, language)}
             </Link>
           ))}
         </div>
@@ -88,22 +96,22 @@ export async function PublicEventList({
         <p className="text-muted-foreground text-sm">
           {isRegisteredOnly
             ? categorySlug
-              ? "No registered events in this category."
-              : "You are not registered for any events yet."
+              ? t.eventList.noRegisteredInCategory
+              : t.eventList.noRegisteredAny
             : categorySlug
-              ? "No events in this category yet."
-              : "No events yet."}{" "}
+              ? t.eventList.noEventsInCategory
+              : t.eventList.noEventsAny}{" "}
           {isRegisteredOnly ? (
             <>
-              <Link href="/discover" className="text-primary underline">
-                Discover events
+              <Link href="/" className="text-primary underline">
+                {t.eventList.discoverEvents}
               </Link>
               .
             </>
           ) : (
             <>
               <Link href="/events/new" className="text-primary underline">
-                Create the first one
+                {t.eventList.createFirst}
               </Link>
               .
             </>
@@ -116,10 +124,14 @@ export async function PublicEventList({
               <EventCard
                 event={{
                   ...e,
-                  category: e.category,
+                  registrationMode: e.registrationMode,
+                  category: e.category
+                    ? { name: localizedName(e.category, language) }
+                    : null,
                 }}
                 registeredCount={e._count.registrations}
                 capacity={e.capacity}
+                externalBadgeLabel={t.eventPage.externalRegistration}
               />
             </li>
           ))}

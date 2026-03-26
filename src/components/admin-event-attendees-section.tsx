@@ -62,6 +62,7 @@ export function AdminEventAttendeesSection({
                   {r.createdAt.toLocaleString("en-US", {
                     dateStyle: "short",
                     timeStyle: "short",
+                    hour12: false,
                   })}
                 </td>
               </tr>

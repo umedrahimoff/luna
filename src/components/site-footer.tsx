@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useI18n } from "@/components/i18n-provider";
 
 export function SiteFooter() {
+  const t = useI18n();
   return (
     <footer className="border-border mt-8 border-t">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-3 py-4 sm:px-5 md:flex-row md:items-center md:justify-between md:gap-6">
@@ -11,13 +13,13 @@ export function SiteFooter() {
             href="/organizers"
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            For Organizers
+            {t.footer.forOrganizers}
           </Link>
           <Link
-            href="/discover"
+            href="/"
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            Help
+            {t.footer.help}
           </Link>
         </nav>
 
@@ -25,21 +27,21 @@ export function SiteFooter() {
           href="/events/new"
           className="text-primary text-sm font-medium underline-offset-4 hover:underline"
         >
-          Host your event with Luna ↗
+          {t.footer.hostCta}
         </Link>
 
         <div className="flex items-center gap-4 text-sm">
           <Link
-            href="/discover"
+            href="/terms"
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            Terms of Use
+            {t.footer.terms}
           </Link>
           <Link
-            href="/discover"
+            href="/privacy"
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            Privacy Policy
+            {t.footer.privacy}
           </Link>
         </div>
       </div>

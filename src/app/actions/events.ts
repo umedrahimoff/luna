@@ -5,6 +5,7 @@ import path from "path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { EventFormat, Prisma, RegistrationMode } from "@prisma/client";
+import { put } from "@vercel/blob";
 import { db } from "@/lib/db";
 import { isStaffAccess } from "@/lib/staff-access";
 import { getSessionUser } from "@/lib/user-session";
@@ -39,6 +40,8 @@ function formDataToObject(formData: FormData) {
       String(formData.get("externalRegistrationUrl") ?? "") || undefined,
     externalSourceLabel:
       String(formData.get("externalSourceLabel") ?? "") || undefined,
+    cityQuery: String(formData.get("cityQuery") ?? "") || undefined,
+    cityId: String(formData.get("cityId") ?? "") || undefined,
     location: String(formData.get("location") ?? "") || undefined,
     locationMapUrl: String(formData.get("locationMapUrl") ?? "") || undefined,
     meetingUrl: String(formData.get("meetingUrl") ?? "") || undefined,
@@ -48,35 +51,79 @@ function formDataToObject(formData: FormData) {
   };
 }
 
+function requiresOfflineFields(format: EventFormat): boolean {
+  return format === EventFormat.OFFLINE || format === EventFormat.HYBRID;
+}
+
+function requiresMeetingUrl(format: EventFormat): boolean {
+  return format === EventFormat.ONLINE || format === EventFormat.HYBRID;
+}
+
 async function uploadEventCover(
   file: FormDataEntryValue | null,
 ): Promise<{ ok: true; url: string | null } | { ok: false; message: string }> {
-  if (!(file instanceof File) || file.size <= 0) {
-    return { ok: true, url: null };
+  try {
+    if (!(file instanceof File) || file.size <= 0) {
+      return { ok: true, url: null };
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return { ok: false, message: "Cover image must be 5MB or smaller" };
+    }
+    const t = file.type.toLowerCase();
+    const ext =
+      t === "image/jpeg" || t === "image/jpg"
+        ? "jpg"
+        : t === "image/png"
+          ? "png"
+          : t === "image/webp"
+            ? "webp"
+            : null;
+    if (!ext) {
+      return { ok: false, message: "Allowed cover formats: JPG, PNG, WEBP" };
+    }
+
+    const fileName = `event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const isVercelRuntime = process.env.VERCEL === "1";
+
+    if (isVercelRuntime) {
+      if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        return {
+          ok: false,
+          message:
+            "File uploads are not configured in production (missing BLOB_READ_WRITE_TOKEN)",
+        };
+      }
+      const blob = await put(`events/${fileName}`, file, {
+        access: "public",
+        addRandomSuffix: false,
+      });
+      return { ok: true, url: blob.url };
+    }
+
+    const relPath = `/uploads/events/${fileName}`;
+    const absDir = path.join(process.cwd(), "public", "uploads", "events");
+    const absPath = path.join(absDir, fileName);
+    await mkdir(absDir, { recursive: true });
+    const bytes = await file.arrayBuffer();
+    await writeFile(absPath, Buffer.from(bytes));
+    return { ok: true, url: relPath };
+  } catch (error) {
+    const detail =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : "Unknown blob upload error";
+    console.error("Event cover upload failed", {
+      detail,
+      isVercelRuntime: process.env.VERCEL === "1",
+      hasBlobToken: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+    });
+    return {
+      ok: false,
+      message: `Could not upload cover image: ${detail}`,
+    };
   }
-  if (file.size > 5 * 1024 * 1024) {
-    return { ok: false, message: "Cover image must be 5MB or smaller" };
-  }
-  const t = file.type.toLowerCase();
-  const ext =
-    t === "image/jpeg" || t === "image/jpg"
-      ? "jpg"
-      : t === "image/png"
-        ? "png"
-        : t === "image/webp"
-          ? "webp"
-          : null;
-  if (!ext) {
-    return { ok: false, message: "Allowed cover formats: JPG, PNG, WEBP" };
-  }
-  const fileName = `event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const relPath = `/uploads/events/${fileName}`;
-  const absDir = path.join(process.cwd(), "public", "uploads", "events");
-  const absPath = path.join(absDir, fileName);
-  await mkdir(absDir, { recursive: true });
-  const bytes = await file.arrayBuffer();
-  await writeFile(absPath, Buffer.from(bytes));
-  return { ok: true, url: relPath };
 }
 
 export async function createEvent(
@@ -132,6 +179,30 @@ export async function createEvent(
       values,
     };
   }
+  let selectedCity:
+    | { id: number; name: string; nameEn: string | null; nameRu: string | null }
+    | null = null;
+  if (requiresOfflineFields(parsed.data.format)) {
+    const cityId = parseRecordId(parsed.data.cityId ?? "");
+    if (cityId == null) {
+      return {
+        ok: false,
+        fieldErrors: { cityId: ["Select a city"] },
+        values,
+      };
+    }
+    selectedCity = await db.city.findUnique({
+      where: { id: cityId },
+      select: { id: true, name: true, nameEn: true, nameRu: true },
+    });
+    if (!selectedCity) {
+      return {
+        ok: false,
+        fieldErrors: { cityId: ["City not found"] },
+        values,
+      };
+    }
+  }
   const staff = await isStaffAccess();
   let ownerUserId = user.id;
   if (staff && parsed.data.ownerUserId) {
@@ -164,15 +235,16 @@ export async function createEvent(
     endsAt,
     format: parsed.data.format,
     location:
-      parsed.data.format === EventFormat.OFFLINE
+      requiresOfflineFields(parsed.data.format)
         ? parsed.data.location?.trim() ?? null
         : null,
+    cityId: requiresOfflineFields(parsed.data.format) ? selectedCity?.id ?? null : null,
     locationMapUrl:
-      parsed.data.format === EventFormat.OFFLINE
+      requiresOfflineFields(parsed.data.format)
         ? parsed.data.locationMapUrl?.trim() || null
         : null,
     meetingUrl:
-      parsed.data.format === EventFormat.ONLINE
+      requiresMeetingUrl(parsed.data.format)
         ? parsed.data.meetingUrl?.trim() || null
         : null,
     registrationMode: parsed.data.registrationMode,
@@ -291,6 +363,30 @@ export async function updateEvent(
       values,
     };
   }
+  let selectedCity:
+    | { id: number; name: string; nameEn: string | null; nameRu: string | null }
+    | null = null;
+  if (requiresOfflineFields(parsed.data.format)) {
+    const cityId = parseRecordId(parsed.data.cityId ?? "");
+    if (cityId == null) {
+      return {
+        ok: false,
+        fieldErrors: { cityId: ["Select a city"] },
+        values,
+      };
+    }
+    selectedCity = await db.city.findUnique({
+      where: { id: cityId },
+      select: { id: true, name: true, nameEn: true, nameRu: true },
+    });
+    if (!selectedCity) {
+      return {
+        ok: false,
+        fieldErrors: { cityId: ["City not found"] },
+        values,
+      };
+    }
+  }
   const coverUpload = await uploadEventCover(formData.get("coverImage"));
   if (!coverUpload.ok) {
     return {
@@ -310,15 +406,19 @@ export async function updateEvent(
       endsAt,
       format: parsed.data.format,
       location:
-        parsed.data.format === EventFormat.OFFLINE
+        requiresOfflineFields(parsed.data.format)
           ? parsed.data.location?.trim() ?? null
           : null,
+      cityId:
+        requiresOfflineFields(parsed.data.format)
+          ? selectedCity?.id ?? null
+          : null,
       locationMapUrl:
-        parsed.data.format === EventFormat.OFFLINE
+        requiresOfflineFields(parsed.data.format)
           ? parsed.data.locationMapUrl?.trim() || null
           : null,
       meetingUrl:
-        parsed.data.format === EventFormat.ONLINE
+        requiresMeetingUrl(parsed.data.format)
           ? parsed.data.meetingUrl?.trim() || null
           : null,
       registrationMode: parsed.data.registrationMode,

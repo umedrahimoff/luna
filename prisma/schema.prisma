@@ -10,6 +10,7 @@ datasource db {
 enum EventFormat {
   ONLINE
   OFFLINE
+  HYBRID
 }
 
 enum RegistrationMode {
@@ -21,6 +22,11 @@ enum UserRole {
   USER
   MODERATOR
   ADMIN
+}
+
+enum AppLanguage {
+  EN
+  RU
 }
 
 model User {
@@ -39,6 +45,7 @@ model User {
   loginSlug      String? @unique
   passwordHash String
   role         UserRole @default(USER)
+  preferredLanguage AppLanguage @default(EN)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   events       Event[]
@@ -67,6 +74,8 @@ model TelegramAuthCode {
 model Category {
   id        Int      @id @default(autoincrement())
   name      String
+  nameEn    String?
+  nameRu    String?
   slug      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -78,6 +87,8 @@ model Category {
 model Country {
   id        Int      @id @default(autoincrement())
   name      String
+  nameEn    String?
+  nameRu    String?
   slug      String   @unique
   code2     String?  @unique
   createdAt DateTime @default(now())
@@ -90,11 +101,14 @@ model Country {
 model City {
   id        Int      @id @default(autoincrement())
   name      String
+  nameEn    String?
+  nameRu    String?
   slug      String
   countryId Int
   country   Country  @relation(fields: [countryId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  events    Event[]
 
   @@unique([countryId, slug])
   @@index([countryId])
@@ -122,6 +136,8 @@ model Event {
   user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   categoryId    Int?
   category      Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  cityId        Int?
+  city          City?       @relation(fields: [cityId], references: [id], onDelete: SetNull)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   registrations Registration[]
@@ -130,6 +146,7 @@ model Event {
   @@index([userId])
   @@index([startsAt])
   @@index([categoryId])
+  @@index([cityId])
 }
 
 model Registration {

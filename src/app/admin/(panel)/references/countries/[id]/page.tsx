@@ -97,13 +97,23 @@ export default async function AdminCountryDetailPage({
         className={adminDetailFormCardClass}
       >
         <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="nameEn">Name (EN)</Label>
           <Input
-            id="name"
-            name="name"
+            id="nameEn"
+            name="nameEn"
             required
             maxLength={120}
-            defaultValue={country.name}
+            defaultValue={country.nameEn ?? country.name}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nameRu">Name (RU)</Label>
+          <Input
+            id="nameRu"
+            name="nameRu"
+            required
+            maxLength={120}
+            defaultValue={country.nameRu ?? ""}
           />
         </div>
         <div className="space-y-2">

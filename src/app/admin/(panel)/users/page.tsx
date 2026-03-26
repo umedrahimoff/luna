@@ -125,6 +125,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                   {u.createdAt.toLocaleString("en-US", {
                     dateStyle: "short",
                     timeStyle: "short",
+                    hour12: false,
                   })}
                 </td>
                 <td className="p-2.5 text-right whitespace-nowrap">

@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { EventFormat, RegistrationMode } from "@prisma/client";
 import type { Event } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/i18n-provider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,6 +45,7 @@ function fieldError(
 }
 
 export function EventForm(props: Props) {
+  const t = useI18n();
   const action = useMemo(
     () =>
       props.mode === "create"
@@ -94,7 +96,24 @@ export function EventForm(props: Props) {
       : RegistrationMode.INTERNAL,
   );
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
-  const editEvent = props.mode === "edit" ? (props.event as Event & { locationMapUrl?: string | null; meetingUrl?: string | null }) : null;
+  const editEvent =
+    props.mode === "edit"
+      ? (props.event as Event & {
+          locationMapUrl?: string | null;
+          meetingUrl?: string | null;
+          cityId?: number | null;
+          city?: { name: string; nameEn?: string | null; nameRu?: string | null } | null;
+        })
+      : null;
+  const [cityQuery, setCityQuery] = useState(
+    values?.cityQuery ?? editEvent?.city?.nameEn ?? editEvent?.city?.name ?? "",
+  );
+  const [cityId, setCityId] = useState(
+    values?.cityId ?? (editEvent?.cityId != null ? String(editEvent.cityId) : ""),
+  );
+  const [cityOptions, setCityOptions] = useState<
+    Array<{ id: number; name: string; countryName: string }>
+  >([]);
 
   useEffect(() => {
     return () => {
@@ -103,7 +122,11 @@ export function EventForm(props: Props) {
   }, [coverPreviewUrl]);
 
   useEffect(() => {
-    if (values?.format === EventFormat.OFFLINE || values?.format === EventFormat.ONLINE) {
+    if (
+      values?.format === EventFormat.OFFLINE ||
+      values?.format === EventFormat.ONLINE ||
+      values?.format === EventFormat.HYBRID
+    ) {
       setFormat(values.format);
     }
   }, [values?.format]);
@@ -115,17 +138,48 @@ export function EventForm(props: Props) {
       setRegistrationMode(values.registrationMode);
     }
   }, [values?.registrationMode]);
+  useEffect(() => {
+    setCityQuery(values?.cityQuery ?? editEvent?.city?.nameEn ?? editEvent?.city?.name ?? "");
+    setCityId(values?.cityId ?? (editEvent?.cityId != null ? String(editEvent.cityId) : ""));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values?.cityQuery, values?.cityId]);
+  useEffect(() => {
+    if (format !== EventFormat.OFFLINE && format !== EventFormat.HYBRID) return;
+    const q = cityQuery.trim();
+    if (q.length < 1) {
+      setCityOptions([]);
+      return;
+    }
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/cities/search?q=${encodeURIComponent(q)}`, {
+          signal: ctrl.signal,
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          items?: Array<{ id: number; name: string; countryName: string }>;
+        };
+        setCityOptions(data.items ?? []);
+      } catch {
+        // ignore transient network/search errors in autocomplete
+      }
+    }, 150);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [cityQuery, format]);
 
   if (props.categories.length === 0) {
     return (
       <div className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        <p className="text-foreground font-medium">No categories</p>
+        <p className="text-foreground font-medium">{t.eventForm.noCategories}</p>
         <p className="mt-2">
-          A global administrator must add categories in the{" "}
+          {t.eventForm.noCategoriesHint}{" "}
           <Link href="/admin/references/categories" className="text-primary underline">
-            admin panel
-          </Link>{" "}
-          first.
+            {t.eventForm.adminPanel}
+          </Link>
         </p>
       </div>
     );
@@ -161,12 +215,12 @@ export function EventForm(props: Props) {
             />
           ) : (
             <div className="text-muted-foreground flex size-full items-center justify-center text-sm">
-              Cover preview
+              {t.eventForm.coverPreview}
             </div>
           )}
         </div>
         <div className={fieldShell}>
-          <Label htmlFor="coverImage">Cover image (file)</Label>
+          <Label htmlFor="coverImage">{t.eventForm.coverImage}</Label>
           <Input
             id="coverImage"
             name="coverImage"
@@ -181,7 +235,7 @@ export function EventForm(props: Props) {
             aria-invalid={!!fieldError(state.fieldErrors, "coverImage")}
           />
           <p className="text-muted-foreground text-xs">
-            JPG/PNG/WEBP, up to 5MB.
+            {t.eventForm.coverHint}
           </p>
           {fieldError(state.fieldErrors, "coverImage") ? (
             <p className="text-destructive text-sm">
@@ -193,7 +247,7 @@ export function EventForm(props: Props) {
 
       <div className="border-border bg-card grid min-w-0 grid-cols-1 gap-4 rounded-2xl border p-4 sm:grid-cols-2">
         <div className={cn(fieldShell, "sm:col-span-2")}>
-          <Label htmlFor="title">Title</Label>
+          <Label htmlFor="title">{t.eventForm.title}</Label>
           <Input
             id="title"
             name="title"
@@ -210,7 +264,7 @@ export function EventForm(props: Props) {
         </div>
 
         <div className={cn(fieldShell, "sm:col-span-2")}>
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description">{t.eventForm.description}</Label>
           <Textarea
             id="description"
             name="description"
@@ -230,7 +284,7 @@ export function EventForm(props: Props) {
         </div>
 
         <div className={fieldShell}>
-          <Label htmlFor="startsAt">Start</Label>
+          <Label htmlFor="startsAt">{t.eventForm.start}</Label>
           <Input
             id="startsAt"
             name="startsAt"
@@ -248,7 +302,7 @@ export function EventForm(props: Props) {
         </div>
 
         <div className={fieldShell}>
-          <Label htmlFor="endsAt">End</Label>
+          <Label htmlFor="endsAt">{t.eventForm.end}</Label>
           <Input
             id="endsAt"
             name="endsAt"
@@ -266,7 +320,7 @@ export function EventForm(props: Props) {
         </div>
 
         <div className={fieldShell}>
-          <Label htmlFor="format">Format</Label>
+          <Label htmlFor="format">{t.eventForm.format}</Label>
           <select
             id="format"
             name="format"
@@ -278,13 +332,14 @@ export function EventForm(props: Props) {
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
             )}
           >
-            <option value={EventFormat.ONLINE}>Online</option>
-            <option value={EventFormat.OFFLINE}>Offline</option>
+            <option value={EventFormat.ONLINE}>{t.eventForm.online}</option>
+            <option value={EventFormat.OFFLINE}>{t.eventForm.offline}</option>
+            <option value={EventFormat.HYBRID}>{t.eventForm.hybrid}</option>
           </select>
         </div>
 
         <div className={fieldShell}>
-          <Label htmlFor="categoryId">Category</Label>
+          <Label htmlFor="categoryId">{t.eventForm.category}</Label>
           <select
             id="categoryId"
             name="categoryId"
@@ -315,7 +370,7 @@ export function EventForm(props: Props) {
 
         {props.mode === "create" && props.ownerOptions?.length ? (
           <div className={fieldShell}>
-            <Label htmlFor="ownerUserId">Organizer</Label>
+            <Label htmlFor="ownerUserId">{t.eventForm.organizer}</Label>
             <select
               id="ownerUserId"
               name="ownerUserId"
@@ -344,7 +399,7 @@ export function EventForm(props: Props) {
         ) : null}
 
         <div className={fieldShell}>
-          <Label htmlFor="registrationMode">Registration</Label>
+          <Label htmlFor="registrationMode">{t.eventForm.registration}</Label>
           <select
             id="registrationMode"
             name="registrationMode"
@@ -358,14 +413,14 @@ export function EventForm(props: Props) {
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
             )}
           >
-            <option value={RegistrationMode.INTERNAL}>On Luna</option>
-            <option value={RegistrationMode.EXTERNAL}>External link</option>
+            <option value={RegistrationMode.INTERNAL}>{t.eventForm.onLuna}</option>
+            <option value={RegistrationMode.EXTERNAL}>{t.eventForm.externalLink}</option>
           </select>
         </div>
 
         {registrationMode === RegistrationMode.EXTERNAL ? (
           <div className={cn(fieldShell, "sm:col-span-2")}>
-            <Label htmlFor="externalRegistrationUrl">External registration URL</Label>
+            <Label htmlFor="externalRegistrationUrl">{t.eventForm.externalUrl}</Label>
             <Input
               id="externalRegistrationUrl"
               name="externalRegistrationUrl"
@@ -390,7 +445,7 @@ export function EventForm(props: Props) {
               </p>
             ) : null}
             <div className="mt-1">
-              <Label htmlFor="externalSourceLabel">Source label (optional)</Label>
+              <Label htmlFor="externalSourceLabel">{t.eventForm.sourceLabel}</Label>
               <Input
                 id="externalSourceLabel"
                 name="externalSourceLabel"
@@ -417,15 +472,58 @@ export function EventForm(props: Props) {
           </div>
         ) : null}
 
-        {format === EventFormat.OFFLINE ? (
+        {format === EventFormat.OFFLINE || format === EventFormat.HYBRID ? (
           <>
             <div className={fieldShell}>
-              <Label htmlFor="location">Location</Label>
+              <Label htmlFor="citySearch">{t.eventForm.city}</Label>
+              <input type="hidden" name="cityId" value={cityId} />
+              <input type="hidden" name="cityQuery" value={cityQuery} />
+              <Input
+                id="citySearch"
+                maxLength={500}
+                placeholder={t.eventForm.cityPlaceholder}
+                value={cityQuery}
+                onChange={(e) => {
+                  setCityQuery(e.target.value);
+                  setCityId("");
+                }}
+                aria-invalid={!!fieldError(state.fieldErrors, "cityId")}
+                autoComplete="off"
+              />
+              {cityOptions.length > 0 ? (
+                <div className="border-border bg-popover max-h-52 overflow-auto rounded-lg border p-1">
+                  {cityOptions.map((city) => (
+                    <button
+                      key={city.id}
+                      type="button"
+                      className="hover:bg-accent w-full rounded-md px-2 py-1.5 text-left text-sm"
+                      onClick={() => {
+                        setCityId(String(city.id));
+                        setCityQuery(city.name);
+                        setCityOptions([]);
+                      }}
+                    >
+                      {city.name}
+                      <span className="text-muted-foreground ml-1 text-xs">
+                        {city.countryName}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {fieldError(state.fieldErrors, "cityId") ? (
+                <p className="text-destructive text-sm">
+                  {fieldError(state.fieldErrors, "cityId")}
+                </p>
+              ) : null}
+            </div>
+            <div className={fieldShell}>
+              <Label htmlFor="location">{t.eventForm.location}</Label>
               <Input
                 id="location"
                 name="location"
                 maxLength={500}
-                placeholder="Address or venue name"
+                placeholder={t.eventForm.locationPlaceholder}
                 defaultValue={
                   values?.location ??
                   (props.mode === "edit" ? props.event.location ?? "" : "")
@@ -439,13 +537,13 @@ export function EventForm(props: Props) {
               ) : null}
             </div>
             <div className={fieldShell}>
-              <Label htmlFor="locationMapUrl">Map link (Google or Yandex)</Label>
+              <Label htmlFor="locationMapUrl">{t.eventForm.mapLink}</Label>
               <Input
                 id="locationMapUrl"
                 name="locationMapUrl"
                 type="url"
                 inputMode="url"
-                placeholder="https://maps.google.com/... or https://yandex.ru/maps/..."
+                placeholder={t.eventForm.mapLinkPlaceholder}
                 defaultValue={
                   values?.locationMapUrl ??
                   (props.mode === "edit" ? editEvent?.locationMapUrl ?? "" : "")
@@ -458,16 +556,38 @@ export function EventForm(props: Props) {
                 </p>
               ) : null}
             </div>
+            {format === EventFormat.HYBRID ? (
+              <div className={cn(fieldShell, "sm:col-span-2")}>
+                <Label htmlFor="meetingUrl">{t.eventForm.meetingLink}</Label>
+                <Input
+                  id="meetingUrl"
+                  name="meetingUrl"
+                  type="url"
+                  inputMode="url"
+                  placeholder={t.eventForm.meetingPlaceholder}
+                  defaultValue={
+                    values?.meetingUrl ??
+                    (props.mode === "edit" ? editEvent?.meetingUrl ?? "" : "")
+                  }
+                  aria-invalid={!!fieldError(state.fieldErrors, "meetingUrl")}
+                />
+                {fieldError(state.fieldErrors, "meetingUrl") ? (
+                  <p className="text-destructive text-sm">
+                    {fieldError(state.fieldErrors, "meetingUrl")}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </>
         ) : (
           <div className={cn(fieldShell, "sm:col-span-2")}>
-            <Label htmlFor="meetingUrl">Meeting link</Label>
+            <Label htmlFor="meetingUrl">{t.eventForm.meetingLink}</Label>
             <Input
               id="meetingUrl"
               name="meetingUrl"
               type="url"
               inputMode="url"
-              placeholder="https://meet.google.com/... or https://zoom.us/..."
+              placeholder={t.eventForm.meetingPlaceholder}
               defaultValue={
                 values?.meetingUrl ??
                 (props.mode === "edit" ? editEvent?.meetingUrl ?? "" : "")
@@ -483,7 +603,7 @@ export function EventForm(props: Props) {
         )}
 
         <div className={fieldShell}>
-          <Label htmlFor="capacity">Capacity limit (optional)</Label>
+          <Label htmlFor="capacity">{t.eventForm.capacity}</Label>
           <Input
             id="capacity"
             name="capacity"
@@ -491,7 +611,7 @@ export function EventForm(props: Props) {
             min={1}
             step={1}
             inputMode="numeric"
-            placeholder="No limit"
+            placeholder={t.eventForm.capacityPlaceholder}
             defaultValue={
               values?.capacity ??
               (props.mode === "edit" && props.event.capacity != null
@@ -518,10 +638,10 @@ export function EventForm(props: Props) {
             className={props.mode === "edit" ? "min-w-32 shrink-0" : "mt-1 w-full min-w-44 sm:w-auto"}
           >
             {pending
-              ? "Saving…"
+              ? t.eventForm.saving
               : props.mode === "create"
-                ? "Create event"
-                : "Save changes"}
+                ? t.eventForm.createEvent
+                : t.eventForm.saveChanges}
           </Button>
         </div>
       </div>

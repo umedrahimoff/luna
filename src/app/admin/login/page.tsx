@@ -1,12 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getStaffContext } from "@/lib/staff-access";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { buildPageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
-export const metadata = {
-  title: "Admin sign in — Luna",
-};
+export const metadata: Metadata = buildPageMetadata({
+  title: "Admin sign in",
+  description: "Sign in to Luna administration panel.",
+  path: "/admin/login",
+  noIndex: true,
+});
 
 export default async function AdminLoginPage() {
   if (await getStaffContext()) {

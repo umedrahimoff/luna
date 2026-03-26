@@ -93,13 +93,23 @@ export default async function AdminCategoryDetailPage({
         className={adminDetailFormCardClass}
       >
         <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="nameEn">Name (EN)</Label>
           <Input
-            id="name"
-            name="name"
+            id="nameEn"
+            name="nameEn"
             required
             maxLength={80}
-            defaultValue={category.name}
+            defaultValue={category.nameEn ?? category.name}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nameRu">Name (RU)</Label>
+          <Input
+            id="nameRu"
+            name="nameRu"
+            required
+            maxLength={80}
+            defaultValue={category.nameRu ?? ""}
           />
         </div>
         <div className="space-y-2">

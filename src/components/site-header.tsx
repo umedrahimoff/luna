@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Calendar, Compass, Plus, Search } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { useI18n } from "@/components/i18n-provider";
 import { HeaderLocalTime } from "@/components/header-local-time";
 import { UserHeaderMenu } from "@/components/user-header-menu";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,7 @@ function HeaderIconSlots() {
 
 export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
   const pathname = usePathname();
+  const t = useI18n();
   const isAdminPanel =
     pathname.startsWith("/admin") && !pathname.startsWith("/admin/login");
 
@@ -72,16 +74,16 @@ export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
       aria-label="Main"
     >
       <MainNavLink
-        href="/discover"
+        href="/"
         icon={Compass}
-        label="Discover"
-        active={pathname.startsWith("/discover")}
+        label={t.nav.discover}
+        active={pathname === "/"}
       />
       <MainNavLink
-        href="/"
+        href="/events"
         icon={Calendar}
-        label="Events"
-        active={pathname === "/"}
+        label={t.nav.events}
+        active={pathname === "/events"}
       />
     </nav>
   );
@@ -95,11 +97,11 @@ export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
           buttonVariants({ variant: "ghost", size: "sm" }),
           "text-foreground shrink-0 gap-1.5 px-2 font-medium",
         )}
-        aria-label="Create event"
-        title="Create event"
+        aria-label={t.nav.createEvent}
+        title={t.nav.createEvent}
       >
         <Plus className="size-4 sm:hidden" aria-hidden />
-        <span className="hidden sm:inline">Create event</span>
+        <span className="hidden sm:inline">{t.nav.createEvent}</span>
       </Link>
       <HeaderIconSlots />
       {sessionUser ? (
@@ -114,7 +116,7 @@ export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
                 "whitespace-nowrap",
               )}
             >
-              Admin
+              {t.nav.admin}
             </Link>
           ) : null}
           <Link
@@ -124,7 +126,7 @@ export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
               "shrink-0 whitespace-nowrap",
             )}
           >
-            Sign in
+            {t.nav.signIn}
           </Link>
         </>
       )}
@@ -141,12 +143,12 @@ export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
           )}
         >
           <Link
-            href="/discover"
+            href="/"
             className="text-base font-semibold tracking-tight text-foreground"
           >
             Luna
           </Link>
-          <span className="text-muted-foreground text-sm">Administration</span>
+          <span className="text-muted-foreground text-sm">{t.nav.administration}</span>
         </div>
       ) : (
         <>
@@ -154,7 +156,7 @@ export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
           <div className="md:hidden">
             <div className="flex h-11 items-center px-3 sm:pl-4">
               <Link
-                href="/discover"
+                href="/"
                 className="text-foreground text-base font-semibold tracking-tight"
               >
                 Luna
@@ -170,7 +172,7 @@ export function SiteHeader({ showAdminLink = false, sessionUser }: Props) {
           <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 hidden w-full grid-cols-[minmax(0,1fr)_min(100%,64rem)_minmax(0,1fr)] items-center md:grid">
             <div className="flex h-14 items-center justify-start self-stretch pl-3 sm:pl-4">
               <Link
-                href="/discover"
+                href="/"
                 className="text-foreground text-base font-semibold tracking-tight"
               >
                 Luna

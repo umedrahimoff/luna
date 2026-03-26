@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   CalendarCheck2,
   CheckCircle2,
@@ -8,13 +9,22 @@ import {
   UsersRound,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { getUserLanguage } from "@/lib/i18n/server";
+import { buildPageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
-export const metadata = {
-  title: "For Organizers — Luna",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = getDictionary(await getUserLanguage());
+  return buildPageMetadata({
+    title: t.organizers.title,
+    description: t.organizers.heroHint,
+    path: "/organizers",
+  });
+}
 
-export default function OrganizersLandingPage() {
+export default async function OrganizersLandingPage() {
+  const t = getDictionary(await getUserLanguage());
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-2 sm:py-4">
       <section className="border-border bg-card relative overflow-hidden rounded-2xl border p-5 sm:p-7">
@@ -23,28 +33,26 @@ export default function OrganizersLandingPage() {
           <div>
             <p className="text-primary inline-flex items-center gap-1 text-xs font-medium">
               <Sparkles className="size-3.5" />
-              Organizer growth platform
+              {t.organizers.badge}
             </p>
             <h1 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">
-              Run events that look premium and convert attendees faster
+              {t.organizers.heroTitle}
             </h1>
             <p className="text-muted-foreground mt-4 max-w-2xl text-sm leading-relaxed sm:text-base">
-              Luna gives you a beautiful event page, a focused registration flow,
-              and attendee control in one clean workspace. Less setup, more
-              bookings, better first impression.
+              {t.organizers.heroHint}
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               <Link
                 href="/events/new"
                 className={cn(buttonVariants({ size: "sm" }), "w-fit")}
               >
-                Host your event
+                {t.organizers.hostEvent}
               </Link>
               <Link
-                href="/discover"
+                href="/"
                 className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-fit")}
               >
-                See live events
+                {t.organizers.seeLiveEvents}
               </Link>
             </div>
           </div>
@@ -168,7 +176,7 @@ export default function OrganizersLandingPage() {
             Create event now
           </Link>
           <Link
-            href="/discover"
+            href="/"
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-fit")}
           >
             Browse event examples

@@ -7,6 +7,7 @@ const dateFmt = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
+  hour12: false,
 });
 
 export function formatEventDate(d: Date): string {
@@ -38,6 +39,7 @@ export function formatEventDateRange(
 const timeFmt = new Intl.DateTimeFormat("en-US", {
   hour: "2-digit",
   minute: "2-digit",
+  hour12: false,
 });
 
 /** List card time (Luma-style). */
@@ -75,7 +77,9 @@ export function formatEventCardWhen(
 }
 
 export function formatLabel(format: EventFormat): string {
-  return format === EventFormat.ONLINE ? "Online" : "Offline";
+  if (format === EventFormat.ONLINE) return "Online";
+  if (format === EventFormat.OFFLINE) return "Offline";
+  return "Hybrid";
 }
 
 /** Value for input[type=datetime-local]. Accepts Date, ISO string (RSC → client), or empty. */

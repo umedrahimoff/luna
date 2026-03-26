@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { EventFormat, type Event } from "@prisma/client";
+import { EventFormat, RegistrationMode, type Event } from "@prisma/client";
 import { MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EventCoverImage } from "@/components/event-cover-image";
@@ -17,16 +17,25 @@ type Props = {
     | "location"
     | "coverImageUrl"
   > & {
+    registrationMode?: Event["registrationMode"];
     category?: { name: string } | null;
   };
   registeredCount: number;
   capacity: number | null;
+  externalBadgeLabel?: string;
 };
 
 /**
  * Luma-style card: metadata left, 1:1 cover right; whole card links to the event page (registration there).
  */
-export function EventCard({ event, registeredCount, capacity }: Props) {
+export function EventCard({
+  event,
+  registeredCount,
+  capacity,
+  externalBadgeLabel = "External event",
+}: Props) {
+  const isExternal = event.registrationMode === RegistrationMode.EXTERNAL;
+
   return (
     <Link
       href={`/${event.publicCode}`}
@@ -45,7 +54,8 @@ export function EventCard({ event, registeredCount, capacity }: Props) {
             {event.title}
           </h3>
 
-          {event.format === EventFormat.OFFLINE && event.location ? (
+          {(event.format === EventFormat.OFFLINE || event.format === EventFormat.HYBRID) &&
+          event.location ? (
             <p className="text-muted-foreground flex items-start gap-1.5 text-[0.6875rem] leading-snug tracking-wide uppercase sm:text-xs">
               <MapPin
                 className="mt-0.5 size-3.5 shrink-0 opacity-70"
@@ -70,7 +80,7 @@ export function EventCard({ event, registeredCount, capacity }: Props) {
             >
               {formatLabel(event.format)}
             </Badge>
-            {capacity != null && (
+            {!isExternal && capacity != null && (
               <Badge
                 variant="outline"
                 className="rounded-lg px-2.5 py-0.5 text-xs"
@@ -78,19 +88,29 @@ export function EventCard({ event, registeredCount, capacity }: Props) {
                 {registeredCount}/{capacity} spots
               </Badge>
             )}
+            {isExternal ? (
+              <Badge
+                variant="outline"
+                className="rounded-lg px-2.5 py-0.5 text-xs"
+              >
+                {externalBadgeLabel}
+              </Badge>
+            ) : null}
           </div>
 
-          <div className="border-border/50 mt-auto flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-dashed pt-2">
-            <span className="text-foreground text-xs font-semibold tabular-nums sm:text-sm">
-              +{registeredCount}
-            </span>
-            <span className="text-muted-foreground text-xs">registered</span>
-            {capacity != null && (
-              <span className="text-muted-foreground/80 text-xs">
-                · cap {capacity}
+          {!isExternal ? (
+            <div className="border-border/50 mt-auto flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-dashed pt-2">
+              <span className="text-foreground text-xs font-semibold tabular-nums sm:text-sm">
+                +{registeredCount}
               </span>
-            )}
-          </div>
+              <span className="text-muted-foreground text-xs">registered</span>
+              {capacity != null && (
+                <span className="text-muted-foreground/80 text-xs">
+                  · cap {capacity}
+                </span>
+              )}
+            </div>
+          ) : null}
         </div>
 
         <EventCoverImage

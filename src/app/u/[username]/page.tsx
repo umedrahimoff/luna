@@ -3,6 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Calendar, CalendarDays } from "lucide-react";
 import { db } from "@/lib/db";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { getUserLanguage } from "@/lib/i18n/server";
+import { localizedName } from "@/lib/localized-name";
+import { buildPageMetadata } from "@/lib/seo";
 import { EventCard } from "@/components/event-card";
 import {
   avatarBackgroundFromEmail,
@@ -14,26 +18,40 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const t = getDictionary(await getUserLanguage());
   const { username: raw } = await params;
   const username = raw.trim().toLowerCase();
   if (!username) {
-    return { title: "Profile — Luna" };
+    return buildPageMetadata({
+      title: t.publicProfile.profileTitle,
+      description: "Public organizer profile on Luna.",
+      path: `/u/${username || "profile"}`,
+    });
   }
   const user = await db.user.findUnique({
     where: { username },
     select: { name: true },
   });
   if (!user) {
-    return { title: "Profile — Luna" };
+    return buildPageMetadata({
+      title: t.publicProfile.profileTitle,
+      description: "Public organizer profile on Luna.",
+      path: `/u/${username}`,
+    });
   }
-  return {
-    title: `${user.name} — Luna`,
-    description: `Events hosted by ${user.name} on Luna.`,
-  };
+  const title = `${user.name} — Luna`;
+  const description = t.publicProfile.profileDescription.replace("{name}", user.name);
+  return buildPageMetadata({
+    title,
+    description,
+    path: `/u/${username}`,
+  });
 }
 
 export default async function PublicUserProfilePage({ params }: Props) {
   const { username: raw } = await params;
+  const language = await getUserLanguage();
+  const t = getDictionary(language);
   const username = raw.trim().toLowerCase();
   if (!username) notFound();
 
@@ -50,7 +68,7 @@ export default async function PublicUserProfilePage({ params }: Props) {
         orderBy: { startsAt: "desc" },
         include: {
           _count: { select: { registrations: true } },
-          category: { select: { name: true } },
+          category: { select: { name: true, nameEn: true, nameRu: true } },
         },
       },
     },
@@ -105,15 +123,15 @@ export default async function PublicUserProfilePage({ params }: Props) {
             </p>
             <p className="text-muted-foreground flex items-center justify-center gap-2 text-sm sm:justify-start">
               <Calendar className="size-4 shrink-0 opacity-80" aria-hidden />
-              <span>Joined {joined}</span>
+              <span>{t.publicProfile.joined.replace("{date}", joined)}</span>
             </p>
           </div>
           <p className="text-foreground text-sm font-medium tabular-nums">
             <span className="text-foreground">{hostedCount}</span>{" "}
-            <span className="text-muted-foreground font-normal">Hosted</span>
+            <span className="text-muted-foreground font-normal">{t.publicProfile.hosted}</span>
             <span className="text-muted-foreground mx-2">·</span>
             <span className="text-foreground">{attendedCount}</span>{" "}
-            <span className="text-muted-foreground font-normal">Attended</span>
+            <span className="text-muted-foreground font-normal">{t.publicProfile.attended}</span>
           </p>
           {user.bio ? (
             <p className="text-muted-foreground mx-auto max-w-xl text-sm leading-relaxed sm:mx-0">
@@ -130,7 +148,7 @@ export default async function PublicUserProfilePage({ params }: Props) {
           id="hosting-heading"
           className="text-foreground text-base font-semibold tracking-tight"
         >
-          Hosting
+          {t.publicProfile.hosting}
         </h2>
 
         {user.events.length === 0 ? (
@@ -141,16 +159,16 @@ export default async function PublicUserProfilePage({ params }: Props) {
               aria-hidden
             />
             <h3 className="text-foreground text-lg font-semibold">
-              Nothing Here, Yet
+              {t.publicProfile.emptyTitle}
             </h3>
             <p className="text-muted-foreground max-w-sm px-4 text-sm leading-relaxed">
-              {user.name} has no public events at this time.
+              {t.publicProfile.emptyHint.replace("{name}", user.name)}
             </p>
             <Link
-              href="/discover"
+              href="/"
               className="text-primary mt-2 text-sm font-medium underline-offset-4 hover:underline"
             >
-              Browse events
+              {t.publicProfile.browseEvents}
             </Link>
           </div>
         ) : (
@@ -160,7 +178,7 @@ export default async function PublicUserProfilePage({ params }: Props) {
                 <EventCard
                   event={{
                     ...e,
-                    category: e.category,
+                    category: e.category ? { name: localizedName(e.category, language) } : null,
                   }}
                   registeredCount={e._count.registrations}
                   capacity={e.capacity}

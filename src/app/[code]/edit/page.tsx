@@ -6,6 +6,8 @@ import { AdminEventRegistrationQuestionsSection } from "@/components/admin-event
 import { buttonVariants } from "@/components/ui/button-variants";
 import { EventForm } from "@/components/event-form";
 import { db } from "@/lib/db";
+import { getUserLanguage } from "@/lib/i18n/server";
+import { localizedName } from "@/lib/localized-name";
 import { isStaffAccess } from "@/lib/staff-access";
 import { getSessionUser } from "@/lib/user-session";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,9 @@ export default async function EditEventPage({ params }: Props) {
   const event = await db.event.findUnique({
     where: { publicCode: code },
     include: {
+      city: {
+        select: { name: true, nameEn: true, nameRu: true },
+      },
       registrations: {
         orderBy: { createdAt: "desc" },
       },
@@ -40,10 +45,15 @@ export default async function EditEventPage({ params }: Props) {
   });
   if (!event || (!staff && (!user || event.userId !== user.id))) notFound();
 
-  const categories = await db.category.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
+  const language = await getUserLanguage();
+  const categoriesRaw = await db.category.findMany({
+    orderBy: { nameEn: "asc" },
+    select: { id: true, name: true, nameEn: true, nameRu: true },
   });
+  const categories = categoriesRaw.map((c) => ({
+    id: c.id,
+    name: localizedName(c, language),
+  }));
 
   const editBase = `/${event.publicCode}/edit`;
 
@@ -111,6 +121,7 @@ export default async function EditEventPage({ params }: Props) {
                               {r.createdAt.toLocaleString("en-US", {
                                 dateStyle: "short",
                                 timeStyle: "short",
+                                hour12: false,
                               })}
                             </td>
                           </tr>

@@ -14,6 +14,7 @@ export const eventFormSchema = z
     ownerUserId: z.string().optional(),
     externalRegistrationUrl: z.string().optional(),
     externalSourceLabel: z.string().trim().max(80).optional(),
+    cityId: z.string().optional(),
     location: z.string().trim().max(500).optional(),
     locationMapUrl: z.string().optional(),
     meetingUrl: z.string().optional(),
@@ -21,12 +22,20 @@ export const eventFormSchema = z
     categoryId: z.coerce.number().int().positive("Select a category"),
   })
   .superRefine((data, ctx) => {
-    if (data.format === EventFormat.OFFLINE) {
-      const loc = data.location?.trim();
-      if (!loc) {
+    if (data.format === EventFormat.OFFLINE || data.format === EventFormat.HYBRID) {
+      const cityId = data.cityId?.trim();
+      if (!cityId) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Enter a location for offline events",
+          message: "Select a city for offline events",
+          path: ["cityId"],
+        });
+      }
+      const locationName = data.location?.trim();
+      if (!locationName) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter location name for offline events",
           path: ["location"],
         });
       }
@@ -44,7 +53,7 @@ export const eventFormSchema = z
         }
       }
     }
-    if (data.format === EventFormat.ONLINE) {
+    if (data.format === EventFormat.ONLINE || data.format === EventFormat.HYBRID) {
       const meetingUrl = data.meetingUrl?.trim();
       if (!meetingUrl) {
         ctx.addIssue({

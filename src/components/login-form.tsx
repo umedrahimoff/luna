@@ -9,8 +9,15 @@ import { Label } from "@/components/ui/label";
 const initial: AuthState = { ok: false };
 
 type Props = { nextPath?: string };
+type I18nAuth = {
+  email: string;
+  password: string;
+  signInTitle?: string;
+  signingIn: string;
+  signInLink?: string;
+};
 
-export function LoginForm({ nextPath }: Props) {
+export function LoginForm({ nextPath, t }: Props & { t: I18nAuth }) {
   const action = useMemo(() => loginUser, []);
   const [state, formAction, pending] = useActionState(action, initial);
 
@@ -23,7 +30,7 @@ export function LoginForm({ nextPath }: Props) {
         <input type="hidden" name="next" value={nextPath} />
       ) : null}
       <div className="w-full space-y-2">
-        <Label htmlFor="login-email">Email</Label>
+        <Label htmlFor="login-email">{t.email}</Label>
         <Input
           id="login-email"
           name="email"
@@ -34,7 +41,7 @@ export function LoginForm({ nextPath }: Props) {
         />
       </div>
       <div className="w-full space-y-2">
-        <Label htmlFor="login-password">Password</Label>
+        <Label htmlFor="login-password">{t.password}</Label>
         <Input
           id="login-password"
           name="password"
@@ -47,7 +54,7 @@ export function LoginForm({ nextPath }: Props) {
         <p className="text-destructive text-sm">{state.message}</p>
       )}
       <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? t.signingIn : (t.signInLink ?? "Sign in")}
       </Button>
     </form>
   );

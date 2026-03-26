@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Pencil, Trash2, Users } from "lucide-react";
+import { EventFormat, RegistrationMode } from "@prisma/client";
 import { db } from "@/lib/db";
 import { adminDeleteEvent } from "@/app/actions/admin-data";
 import { ConfirmForm } from "@/components/confirm-form";
@@ -61,6 +62,7 @@ export default async function AdminEventsPage({ searchParams }: Props) {
           <option value="">All</option>
           <option value="ONLINE">Online</option>
           <option value="OFFLINE">Offline</option>
+          <option value="HYBRID">Hybrid</option>
         </select>
       </div>
       <div className="min-w-[10rem] flex-1 flex-col gap-1.5 sm:max-w-[14rem]">
@@ -126,6 +128,8 @@ export default async function AdminEventsPage({ searchParams }: Props) {
             <tr>
               <th className="p-2.5 font-medium">Title</th>
               <th className="p-2.5 font-medium">Category</th>
+              <th className="p-2.5 font-medium">Format</th>
+              <th className="p-2.5 font-medium">Registration</th>
               <th className="p-2.5 font-medium">Starts</th>
               <th className="p-2.5 font-medium">Attendees</th>
               <th className="p-2.5 font-medium">Owner</th>
@@ -148,15 +152,29 @@ export default async function AdminEventsPage({ searchParams }: Props) {
                 <td className="text-muted-foreground p-2.5">
                   {e.category?.name ?? "—"}
                 </td>
+                <td className="text-muted-foreground p-2.5">
+                  {e.format === EventFormat.ONLINE
+                    ? "Online"
+                    : e.format === EventFormat.OFFLINE
+                      ? "Offline"
+                      : "Hybrid"}
+                </td>
+                <td className="text-muted-foreground p-2.5">
+                  {e.registrationMode === RegistrationMode.EXTERNAL
+                    ? "External"
+                    : "Internal"}
+                </td>
                 <td className="text-muted-foreground p-2.5 tabular-nums">
                   {e.startsAt.toLocaleString("en-US", {
                     dateStyle: "short",
                     timeStyle: "short",
+                    hour12: false,
                   })}
                 </td>
                 <td className="p-2.5 tabular-nums">
-                  {e._count.registrations}
-                  {e.capacity != null ? ` / ${e.capacity}` : ""}
+                  {e.registrationMode === RegistrationMode.EXTERNAL
+                    ? "N/A"
+                    : `${e._count.registrations}${e.capacity != null ? ` / ${e.capacity}` : ""}`}
                 </td>
                 <td className="text-muted-foreground max-w-[200px] truncate p-2.5 text-xs">
                   <span className="block truncate font-medium text-foreground">

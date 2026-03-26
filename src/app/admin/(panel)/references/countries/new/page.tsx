@@ -54,13 +54,23 @@ export default async function AdminNewCountryPage({ searchParams }: Props) {
         className={adminDetailFormCardClass}
       >
         <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="nameEn">Name (EN)</Label>
           <Input
-            id="name"
-            name="name"
+            id="nameEn"
+            name="nameEn"
             required
             maxLength={120}
             placeholder="e.g. Kazakhstan"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nameRu">Name (RU)</Label>
+          <Input
+            id="nameRu"
+            name="nameRu"
+            required
+            maxLength={120}
+            placeholder="например, Казахстан"
           />
         </div>
         <div className="space-y-2">

@@ -25,7 +25,7 @@ function decodeErr(e?: string) {
 
 export default async function AdminNewCityPage({ searchParams }: Props) {
   const { e: error } = await searchParams;
-  const countries = await db.country.findMany({ orderBy: { name: "asc" } });
+  const countries = await db.country.findMany({ orderBy: { nameEn: "asc" } });
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-5">
@@ -69,19 +69,29 @@ export default async function AdminNewCityPage({ searchParams }: Props) {
             </option>
             {countries.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {c.nameEn ?? c.name}
               </option>
             ))}
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="nameEn">Name (EN)</Label>
           <Input
-            id="name"
-            name="name"
+            id="nameEn"
+            name="nameEn"
             required
             maxLength={120}
             placeholder="e.g. Almaty"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nameRu">Name (RU)</Label>
+          <Input
+            id="nameRu"
+            name="nameRu"
+            required
+            maxLength={120}
+            placeholder="например, Алматы"
           />
         </div>
         <div className="space-y-2">

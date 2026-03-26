@@ -45,6 +45,9 @@ export default async function AdminEditEventPage({
   const event = await db.event.findUnique({
     where: { id: eventId },
     include: {
+      city: {
+        select: { name: true, nameEn: true, nameRu: true },
+      },
       registrations: {
         where: registrationListWhere(eventId, q),
         orderBy: { createdAt: sortOrder },
@@ -94,8 +97,8 @@ export default async function AdminEditEventPage({
   );
 
   const categories = await db.category.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
+    orderBy: { nameEn: "asc" },
+    select: { id: true, name: true, nameEn: true },
   });
 
   const afterSave = `/admin/events/${encodeURIComponent(idRaw)}/edit`;
@@ -134,7 +137,10 @@ export default async function AdminEditEventPage({
             <EventForm
               mode="edit"
               event={event as Event}
-              categories={categories}
+              categories={categories.map((c) => ({
+                id: c.id,
+                name: c.nameEn ?? c.name,
+              }))}
               afterUpdateRedirect={afterSave}
             />
           </>

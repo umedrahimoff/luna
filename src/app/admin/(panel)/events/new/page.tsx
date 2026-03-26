@@ -11,8 +11,8 @@ export default async function AdminNewEventPage() {
     getSessionUser(),
     isStaffAccess(),
     db.category.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      orderBy: { nameEn: "asc" },
+      select: { id: true, name: true, nameEn: true },
     }),
     db.user.findMany({
       orderBy: [{ role: "desc" }, { name: "asc" }],
@@ -40,7 +40,10 @@ export default async function AdminNewEventPage() {
       </div>
       <EventForm
         mode="create"
-        categories={categories}
+        categories={categories.map((c) => ({
+          id: c.id,
+          name: c.nameEn ?? c.name,
+        }))}
         ownerOptions={ownerOptions}
         defaultOwnerId={sessionUser.id}
       />

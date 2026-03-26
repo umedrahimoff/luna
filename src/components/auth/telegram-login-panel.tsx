@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
 const tgInitial: TelegramAuthState = { ok: false };
@@ -29,6 +30,7 @@ function fieldErr(
 }
 
 export function TelegramLoginPanel({ nextPath }: Props) {
+  const t = useI18n();
   const [mode, setMode] = useState<Mode>("code");
   const [loginSlug, setLoginSlug] = useState("");
 
@@ -54,7 +56,7 @@ export function TelegramLoginPanel({ nextPath }: Props) {
     <div className="flex flex-col gap-5">
       <div
         role="tablist"
-        aria-label="Sign in method"
+        aria-label={t.telegram.method}
         className="bg-muted/50 border-border flex gap-1 rounded-xl border p-1"
       >
         <button
@@ -69,7 +71,7 @@ export function TelegramLoginPanel({ nextPath }: Props) {
           )}
           onClick={() => setMode("code")}
         >
-          Code
+          {t.telegram.code}
         </button>
         <button
           type="button"
@@ -83,20 +85,19 @@ export function TelegramLoginPanel({ nextPath }: Props) {
           )}
           onClick={() => setMode("password")}
         >
-          Password
+          {t.telegram.password}
         </button>
       </div>
 
       {mode === "code" ? (
         <div className="flex flex-col gap-4">
           <p className="text-muted-foreground text-sm">
-            The code will be sent to the Telegram account linked during bot
-            signup.
+            {t.telegram.codeHint}
           </p>
 
           <form action={reqFormAction} className="flex flex-col gap-4">
             <div className="space-y-2">
-              <Label htmlFor="tg-login-slug">Login</Label>
+              <Label htmlFor="tg-login-slug">{t.telegram.login}</Label>
               <Input
                 id="tg-login-slug"
                 name="loginSlug"
@@ -125,7 +126,7 @@ export function TelegramLoginPanel({ nextPath }: Props) {
               </p>
             ) : null}
             <Button type="submit" disabled={reqPending} className="w-full">
-              {reqPending ? "Sending…" : "Send code to Telegram"}
+              {reqPending ? "Sending…" : t.telegram.sendCode}
             </Button>
           </form>
 
@@ -135,13 +136,13 @@ export function TelegramLoginPanel({ nextPath }: Props) {
             ) : null}
             <input type="hidden" name="loginSlug" value={loginSlug} />
             <div className="space-y-2">
-              <Label htmlFor="tg-login-code">Telegram code</Label>
+              <Label htmlFor="tg-login-code">{t.telegram.telegramCode}</Label>
               <Input
                 id="tg-login-code"
                 name="code"
                 required
                 autoComplete="one-time-code"
-                placeholder="Enter code"
+                placeholder={t.telegram.enterCode}
                 className="font-mono uppercase"
                 aria-invalid={!!fieldErr(loginState.fieldErrors, "code")}
               />
@@ -155,7 +156,7 @@ export function TelegramLoginPanel({ nextPath }: Props) {
               <p className="text-destructive text-sm">{loginState.message}</p>
             ) : null}
             <Button type="submit" disabled={completePending} className="w-full">
-              {completePending ? "Signing in…" : "Sign in"}
+              {completePending ? t.auth.signingIn : t.auth.signInLink}
             </Button>
           </form>
         </div>
@@ -165,10 +166,10 @@ export function TelegramLoginPanel({ nextPath }: Props) {
             <input type="hidden" name="next" value={nextPath} />
           ) : null}
           <p className="text-muted-foreground text-sm">
-            Sign in with email and password, same as regular website sign up.
+            {t.telegram.passwordHint}
           </p>
           <div className="space-y-2">
-            <Label htmlFor="pwd-email">Email</Label>
+            <Label htmlFor="pwd-email">{t.auth.email}</Label>
             <Input
               id="pwd-email"
               name="email"
@@ -178,7 +179,7 @@ export function TelegramLoginPanel({ nextPath }: Props) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="pwd-pass">Password</Label>
+            <Label htmlFor="pwd-pass">{t.auth.password}</Label>
             <Input
               id="pwd-pass"
               name="password"
@@ -191,15 +192,15 @@ export function TelegramLoginPanel({ nextPath }: Props) {
             <p className="text-destructive text-sm">{pwdState.message}</p>
           ) : null}
           <Button type="submit" disabled={pwdPending} className="w-full">
-            {pwdPending ? "Signing in…" : "Sign in"}
+            {pwdPending ? t.auth.signingIn : t.auth.signInLink}
           </Button>
         </form>
       )}
 
       <p className="text-muted-foreground text-center text-sm">
-        No account yet?{" "}
+        {t.telegram.noAccount}{" "}
         <Link href="/register" className="text-primary font-medium underline">
-          Sign up
+          {t.telegram.signUp}
         </Link>
       </p>
 
@@ -210,7 +211,7 @@ export function TelegramLoginPanel({ nextPath }: Props) {
           "text-muted-foreground self-center",
         )}
       >
-        ← Regular email sign in
+        {t.telegram.regularSignIn}
       </Link>
     </div>
   );

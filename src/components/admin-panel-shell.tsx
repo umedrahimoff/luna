@@ -165,7 +165,7 @@ export function AdminPanelShell({
 
         <div className="border-border mt-auto flex flex-col gap-0.5 border-t p-2">
           <Link
-            href="/discover"
+            href="/"
             className="text-muted-foreground hover:text-foreground flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm transition-colors"
           >
             <ExternalLink className="size-4 shrink-0" aria-hidden />

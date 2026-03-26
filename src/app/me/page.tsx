@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { splitDisplayName } from "@/lib/display-name";
+import { localizedName } from "@/lib/localized-name";
+import { buildPageMetadata } from "@/lib/seo";
 import { requireUser } from "@/lib/require-user";
 import { MePageClient } from "@/components/me/me-page-client";
 
@@ -9,6 +12,13 @@ const PROTECTED_ACCOUNT_EMAIL = "thisisumed@gmail.com";
 const PROTECTED_ACCOUNT_EMAIL_NORM = PROTECTED_ACCOUNT_EMAIL
   .trim()
   .toLowerCase();
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Profile",
+  description: "Manage your Luna profile, settings, and hosted events.",
+  path: "/me",
+  noIndex: true,
+});
 
 function MeFallback() {
   return (
@@ -32,6 +42,7 @@ async function MeContent() {
       username: true,
       avatarUrl: true,
       role: true,
+      preferredLanguage: true,
     },
   });
   if (!user) {
@@ -40,14 +51,20 @@ async function MeContent() {
 
   const { firstName, lastName } = splitDisplayName(user.name);
 
-  const events = await db.event.findMany({
+  const eventsRaw = await db.event.findMany({
     where: { userId: session.id },
     orderBy: { startsAt: "desc" },
     include: {
       _count: { select: { registrations: true } },
-      category: { select: { name: true } },
+      category: { select: { name: true, nameEn: true, nameRu: true } },
     },
   });
+  const events = eventsRaw.map((event) => ({
+    ...event,
+    category: event.category
+      ? { name: localizedName(event.category, user.preferredLanguage) }
+      : null,
+  }));
 
   const protectedAccount = await db.user.findFirst({
     where: { email: PROTECTED_ACCOUNT_EMAIL_NORM },
@@ -78,6 +95,7 @@ async function MeContent() {
         bio: user.bio,
         username: user.username,
         avatarUrl: user.avatarUrl,
+        preferredLanguage: user.preferredLanguage,
       }}
       canDeleteAccount={canDeleteAccount}
       deleteBlockedReason={deleteBlockedReason}

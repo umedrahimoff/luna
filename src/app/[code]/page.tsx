@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EventFormat, RegistrationMode } from "@prisma/client";
@@ -10,13 +11,60 @@ import {
   initialsFromName,
 } from "@/lib/avatar-style";
 import { db } from "@/lib/db";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { getUserLanguage } from "@/lib/i18n/server";
+import { localizedName } from "@/lib/localized-name";
 import { getSessionUser } from "@/lib/user-session";
 import { isStaffAccess } from "@/lib/staff-access";
 import { formatEventDateRange, formatLabel } from "@/lib/format";
+import { buildPageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import { isValidEventPublicCode } from "@/lib/event-public-code";
 
 type Props = { params: Promise<{ code: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { code } = await params;
+  if (!isValidEventPublicCode(code)) {
+    return buildPageMetadata({
+      title: "Event",
+      description: "Event page on Luna.",
+      path: `/${code}`,
+      imagePath: `/${code}/opengraph-image`,
+    });
+  }
+
+  const event = await db.event.findUnique({
+    where: { publicCode: code },
+    select: {
+      title: true,
+      description: true,
+      format: true,
+      location: true,
+    },
+  });
+
+  if (!event) {
+    return buildPageMetadata({
+      title: "Event",
+      description: "Event page on Luna.",
+      path: `/${code}`,
+      imagePath: `/${code}/opengraph-image`,
+    });
+  }
+
+  const shortDescription =
+    event.description.trim().slice(0, 170) ||
+    `${formatLabel(event.format)} event on Luna`;
+  const locationSuffix = event.location?.trim() ? ` · ${event.location.trim()}` : "";
+
+  return buildPageMetadata({
+    title: event.title,
+    description: `${shortDescription}${locationSuffix}`,
+    path: `/${code}`,
+    imagePath: `/${code}/opengraph-image`,
+  });
+}
 
 export default async function EventPage({ params }: Props) {
   const { code } = await params;
@@ -26,7 +74,8 @@ export default async function EventPage({ params }: Props) {
     where: { publicCode: code },
     include: {
       _count: { select: { registrations: true } },
-      category: { select: { name: true } },
+      category: { select: { name: true, nameEn: true, nameRu: true } },
+      city: { select: { name: true, nameEn: true, nameRu: true } },
       registrationQuestions: {
         orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
         select: {
@@ -52,6 +101,8 @@ export default async function EventPage({ params }: Props) {
   if (!event) notFound();
 
   const user = await getSessionUser();
+  const language = await getUserLanguage();
+  const t = getDictionary(language);
   const staff = await isStaffAccess();
   const isOwner = user != null && event.userId === user.id;
   const canEdit = isOwner || staff;
@@ -60,7 +111,8 @@ export default async function EventPage({ params }: Props) {
     event.capacity != null && registered >= event.capacity;
   const hostInitials = initialsFromName(event.user.name);
   const hostAvatarBg = avatarBackgroundFromEmail(event.user.email ?? event.user.name);
-  const mapQuery = event.location?.trim() ?? "";
+  const cityName = event.city ? localizedName(event.city, language) : null;
+  const mapQuery = [event.location?.trim(), cityName?.trim()].filter(Boolean).join(", ");
   const locationMapUrl = (event as typeof event & { locationMapUrl?: string | null })
     .locationMapUrl;
   const meetingUrl = (event as typeof event & { meetingUrl?: string | null }).meetingUrl;
@@ -103,14 +155,14 @@ export default async function EventPage({ params }: Props) {
         </div>
 
         <section className="border-border bg-card rounded-2xl border p-4">
-          <h2 className="text-sm font-semibold tracking-tight">About organizer</h2>
+          <h2 className="text-sm font-semibold tracking-tight">{t.eventPage.aboutOrganizer}</h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            {event.user.bio?.trim() || "Hosting curated events on Luna."}
+            {event.user.bio?.trim() || t.eventPage.hostFallbackBio}
           </p>
         </section>
 
         <section className="border-border bg-card rounded-2xl border p-4">
-          <h2 className="text-sm font-semibold tracking-tight">Organizer</h2>
+          <h2 className="text-sm font-semibold tracking-tight">{t.eventPage.organizer}</h2>
           <div className="mt-3 flex items-center gap-3">
             {event.user.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -140,12 +192,12 @@ export default async function EventPage({ params }: Props) {
                   @{event.user.username}
                 </Link>
               ) : (
-                <p className="text-muted-foreground text-xs">Luna host</p>
+                <p className="text-muted-foreground text-xs">{t.eventPage.lunaHost}</p>
               )}
             </div>
           </div>
           <p className="text-muted-foreground mt-3 text-sm">
-            Attendees:{" "}
+            {t.eventPage.attendees}:{" "}
             <span className="text-foreground font-medium">
               {registered}
               {event.capacity != null ? ` / ${event.capacity}` : ""}
@@ -157,11 +209,11 @@ export default async function EventPage({ params }: Props) {
       <section className="flex min-w-0 flex-col gap-5">
         <div className="flex flex-wrap items-center gap-2">
           {event.category?.name ? (
-            <Badge variant="outline">{event.category.name}</Badge>
+            <Badge variant="outline">{localizedName(event.category, language)}</Badge>
           ) : null}
           <Badge variant="secondary">{formatLabel(event.format)}</Badge>
           {registrationMode === RegistrationMode.EXTERNAL ? (
-            <Badge variant="outline">External registration</Badge>
+            <Badge variant="outline">{t.eventPage.externalRegistration}</Badge>
           ) : null}
         </div>
 
@@ -172,14 +224,43 @@ export default async function EventPage({ params }: Props) {
           <p className="text-muted-foreground text-sm">
             {formatEventDateRange(event.startsAt, event.endsAt)}
           </p>
-          {event.format === EventFormat.OFFLINE && event.location ? (
-            <p className="text-sm">
-              <span className="text-muted-foreground">Location: </span>
-              {event.location}
-            </p>
+          {event.format === EventFormat.OFFLINE || event.format === EventFormat.HYBRID ? (
+            <>
+              {cityName ? (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">{t.eventPage.city}: </span>
+                  {cityName}
+                </p>
+              ) : null}
+              {event.location ? (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">{t.eventPage.location}: </span>
+                  {event.location}
+                </p>
+              ) : null}
+              {event.format === EventFormat.HYBRID ? (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">{t.eventPage.meetingLink}: </span>
+                  {canShowMeetingLink ? (
+                    <a
+                      href={meetingUrl!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-4"
+                    >
+                      {t.eventPage.joinMeeting}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {t.eventPage.availableAfterRegistration}
+                    </span>
+                  )}
+                </p>
+              ) : null}
+            </>
           ) : (
             <p className="text-sm">
-              <span className="text-muted-foreground">Meeting link: </span>
+              <span className="text-muted-foreground">{t.eventPage.meetingLink}: </span>
               {canShowMeetingLink ? (
                 <a
                   href={meetingUrl!}
@@ -187,11 +268,11 @@ export default async function EventPage({ params }: Props) {
                   rel="noopener noreferrer"
                   className="text-primary underline underline-offset-4"
                 >
-                  Join meeting
+                  {t.eventPage.joinMeeting}
                 </a>
               ) : (
                 <span className="text-muted-foreground">
-                  Available after registration
+                  {t.eventPage.availableAfterRegistration}
                 </span>
               )}
             </p>
@@ -206,17 +287,17 @@ export default async function EventPage({ params }: Props) {
               "w-fit",
             )}
           >
-            Edit
+            {t.eventPage.edit}
           </Link>
         ) : null}
 
         <section className="border-border border-t pt-4">
-          <h2 className="text-base font-semibold tracking-tight">Registration</h2>
+          <h2 className="text-base font-semibold tracking-tight">{t.eventPage.registration}</h2>
           {registrationMode === RegistrationMode.EXTERNAL ? (
             <>
               <p className="text-muted-foreground mt-1 mb-4 max-w-xl text-sm leading-relaxed">
-                Registration is handled on the organizer&apos;s side.
-                {externalSourceLabel ? ` Source: ${externalSourceLabel}.` : ""}
+                {t.eventPage.externalHint}
+                {externalSourceLabel ? ` ${t.eventPage.source}: ${externalSourceLabel}.` : ""}
               </p>
               <div className="border-border bg-card rounded-2xl border p-4 sm:p-5">
                 <a
@@ -225,15 +306,14 @@ export default async function EventPage({ params }: Props) {
                   rel="noopener noreferrer"
                   className={cn(buttonVariants({ size: "sm" }), "w-full sm:w-auto")}
                 >
-                  Register on external site
+                  {t.eventPage.registerExternal}
                 </a>
               </div>
             </>
           ) : (
             <>
               <p className="text-muted-foreground mt-1 mb-4 max-w-xl text-sm leading-relaxed">
-                Submit a join request via the registration block below. The form opens
-                in a modal with required fields.
+                {t.eventPage.internalHint}
               </p>
               <EventRegisterForm
                 eventId={event.id}
@@ -254,7 +334,7 @@ export default async function EventPage({ params }: Props) {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="text-base font-semibold tracking-tight">Description</h2>
+          <h2 className="text-base font-semibold tracking-tight">{t.eventPage.description}</h2>
           <p className="text-foreground whitespace-pre-wrap text-sm leading-relaxed sm:text-base">
             {event.description}
           </p>
@@ -263,7 +343,7 @@ export default async function EventPage({ params }: Props) {
         {mapsEmbedUrl ? (
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold tracking-tight">Map</h2>
+              <h2 className="text-base font-semibold tracking-tight">{t.eventPage.map}</h2>
               {mapsOpenUrl ? (
                 <a
                   href={mapsOpenUrl}
@@ -271,7 +351,7 @@ export default async function EventPage({ params }: Props) {
                   rel="noopener noreferrer"
                   className="text-primary text-xs font-medium underline underline-offset-4"
                 >
-                  Open in Maps
+                  {t.eventPage.openInMaps}
                 </a>
               ) : null}
             </div>

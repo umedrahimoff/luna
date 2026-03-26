@@ -19,9 +19,9 @@ export function HeaderLocalTime() {
     const tick = () => {
       const d = new Date();
       const time = d.toLocaleTimeString("en-US", {
-        hour: "numeric",
+        hour: "2-digit",
         minute: "2-digit",
-        hour12: true,
+        hour12: false,
       });
       setLabel(`${time} ${formatGmtOffset(d)}`);
     };
